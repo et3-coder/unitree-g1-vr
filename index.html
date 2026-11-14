@@ -3,101 +3,115 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Unitree G1 — Esperimento Human-in-the-Loop (UNINT)</title>
+  <title>Unitree G1 — Laboratorio Sicurezza Embodied AI (UNINT)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       overflow: hidden;
-      background: #e6f0fc;
+      background: #dbeafe;
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
       color: #0f172a;
       user-select: none;
     }
 
+    /* HUD Superiore */
     #hud-top {
       position: fixed;
-      top: 16px;
+      top: 14px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(10px);
       border: 1px solid #cbd5e1;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
       border-radius: 999px;
-      padding: 10px 24px;
+      padding: 9px 22px;
       display: flex;
       align-items: center;
-      gap: 22px;
+      gap: 18px;
       z-index: 20;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
+      white-space: nowrap;
     }
     .pill-tag {
-      background: #2563eb;
+      background: #1d4ed8;
       color: #ffffff;
       padding: 4px 12px;
       border-radius: 999px;
-      font-size: 13px;
+      font-size: 12px;
       letter-spacing: 0.4px;
     }
     .hearts {
       color: #ef4444;
-      font-size: 20px;
-      letter-spacing: 3px;
+      font-size: 19px;
+      letter-spacing: 2px;
     }
 
+    /* Banner Lezione Didattica */
     #lesson-banner {
       position: fixed;
-      top: 78px;
+      top: 72px;
       left: 50%;
       transform: translateX(-50%);
-      background: #ffffff;
-      border: 2px solid #2563eb;
-      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.16);
+      background: rgba(255, 255, 255, 0.97);
+      border: 2.5px solid #2563eb;
+      box-shadow: 0 14px 36px rgba(15, 23, 42, 0.18);
       border-radius: 20px;
-      padding: 16px 28px;
+      padding: 16px 26px;
       text-align: center;
-      max-width: 560px;
-      width: 90%;
+      max-width: 620px;
+      width: 92%;
       z-index: 25;
       display: none;
     }
     #lesson-banner h2 {
-      font-size: 21px;
+      font-size: 20px;
       margin-bottom: 6px;
       color: #0f172a;
     }
     #lesson-banner p {
       font-size: 15px;
-      color: #475569;
-      line-height: 1.4;
+      color: #334155;
+      line-height: 1.45;
+    }
+    #lesson-banner .mitigation-tip {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #1d4ed8;
     }
 
+    /* Dock Inferiore con UN SOLO VERBO: FERMA */
     #bottom-dock {
       position: fixed;
-      bottom: 24px;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: #ffffff;
-      border-radius: 26px;
-      padding: 14px 22px;
-      box-shadow: 0 14px 36px rgba(15, 23, 42, 0.12);
-      border-top: 5px solid #2563eb;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 12px 22px;
+      box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
+      border-top: 5px solid #1d4ed8;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
       z-index: 20;
-      min-width: 320px;
+      min-width: 330px;
     }
     #task-caption {
       font-size: 14px;
       font-weight: 600;
-      color: #334155;
+      color: #1e293b;
+      text-align: center;
     }
     #btn-stop {
-      width: 280px;
-      height: 68px;
+      width: 290px;
+      height: 66px;
       border: none;
       border-radius: 18px;
       background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
@@ -118,7 +132,7 @@
     }
     @keyframes pulseStop {
       0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-      50% { transform: scale(1.06); box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+      50% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
     }
     .pulse-hint {
       animation: pulseStop 0.85s infinite;
@@ -126,21 +140,22 @@
 
     #btn-next-level {
       display: none;
-      width: 280px;
-      height: 54px;
+      width: 290px;
+      height: 52px;
       border: none;
       border-radius: 14px;
-      background: #2563eb;
+      background: #1d4ed8;
       color: #ffffff;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 700;
       cursor: pointer;
     }
 
+    /* Modale Iniziale e Finale */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(230, 240, 252, 0.82);
+      background: rgba(15, 23, 42, 0.55);
       backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
@@ -150,39 +165,41 @@
     }
     .card-box {
       background: #ffffff;
-      border-radius: 28px;
-      padding: 30px 32px;
-      max-width: 540px;
+      border-radius: 26px;
+      padding: 26px 30px;
+      max-width: 560px;
       width: 100%;
-      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14);
-      border-top: 6px solid #2563eb;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+      border-top: 6px solid #1d4ed8;
+      max-height: 92vh;
+      overflow-y: auto;
     }
     .card-box h1 {
-      font-size: 24px;
+      font-size: 22px;
       color: #0f172a;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .card-box p.sub {
-      font-size: 15px;
+      font-size: 14.5px;
       color: #475569;
-      margin-bottom: 20px;
-      line-height: 1.5;
+      margin-bottom: 16px;
+      line-height: 1.45;
     }
     .form-row {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .form-row label {
       display: block;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       color: #334155;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       text-transform: uppercase;
       letter-spacing: 0.4px;
     }
     .form-row input, .form-row select {
       width: 100%;
-      padding: 12px 14px;
+      padding: 10px 13px;
       border-radius: 12px;
       border: 1.5px solid #cbd5e1;
       font-size: 15px;
@@ -193,49 +210,43 @@
       background: #eff6ff;
       border: 1px solid #bfdbfe;
       border-radius: 14px;
-      padding: 14px;
-      margin-bottom: 20px;
-      font-size: 14px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 13.5px;
       color: #1e3a8a;
+      line-height: 1.45;
     }
     .primary-btn {
       width: 100%;
-      padding: 15px;
+      padding: 14px;
       border: none;
-      border-radius: 16px;
-      background: #2563eb;
+      border-radius: 15px;
+      background: #1d4ed8;
       color: #ffffff;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+      box-shadow: 0 8px 20px rgba(29, 78, 216, 0.28);
     }
-    .primary-btn:hover { background: #1d4ed8; }
-    #status-msg {
-      margin-top: 10px;
-      font-size: 13px;
-      color: #dc2626;
-      text-align: center;
-      display: none;
-    }
+    .primary-btn:hover { background: #1e40af; }
 
     .metrics-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin: 18px 0;
+      gap: 10px;
+      margin: 14px 0;
     }
     .metric-card {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 14px;
-      padding: 12px;
+      padding: 11px;
       text-align: center;
     }
     .metric-val {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 800;
-      color: #2563eb;
+      color: #1d4ed8;
     }
     .metric-lbl {
       font-size: 12px;
@@ -244,25 +255,24 @@
     }
     .secondary-btn {
       width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border: 1.5px solid #2563eb;
+      padding: 11px;
+      margin-top: 9px;
+      border: 1.5px solid #1d4ed8;
       border-radius: 14px;
       background: #ffffff;
-      color: #2563eb;
-      font-size: 15px;
+      color: #1d4ed8;
+      font-size: 14.5px;
       font-weight: 700;
       cursor: pointer;
     }
     #vr-btn-wrap {
       position: fixed;
-      top: 16px;
-      right: 16px;
+      top: 14px;
+      right: 14px;
       z-index: 30;
     }
   </style>
 
-  <!-- Polyfill roundRect + diagnostica immediata -->
   <script>
     if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) {
       CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -278,16 +288,6 @@
         return this;
       };
     }
-    window.__simReady = false;
-    window.addEventListener("DOMContentLoaded", function () {
-      document.getElementById("btn-start").addEventListener("click", function () {
-        if (!window.__simReady) {
-          var msg = document.getElementById("status-msg");
-          msg.style.display = "block";
-          msg.textContent = "Caricamento motore 3D in corso o connessione assente. Attendi 2 secondi e riprova.";
-        }
-      });
-    });
   </script>
 
   <script type="importmap">
@@ -301,848 +301,6 @@
 </head>
 <body>
   <div id="hud-top">
-    <span class="pill-tag" id="hud-level">LIVELLO 1 / 3</span>
+    <span class="pill-tag" id="hud-level">SCENARIO 1 / 5</span>
     <span id="hud-group">Gruppo Sperimentale</span>
-    <span class="hearts" id="hud-hearts">♥ ♥ ♥</span>
-  </div>
-
-  <div id="lesson-banner">
-    <h2 id="banner-title">Hai fermato il messaggio!</h2>
-    <p id="banner-text">Guarda in alto: il messaggio è ancora lì, ma tu hai fermato il corpo del robot.</p>
-  </div>
-
-  <div id="bottom-dock">
-    <div id="task-caption">Osserva l'Unitree G1 nel cerchio blu...</div>
-    <button id="btn-stop">FERMA</button>
-    <button id="btn-next-level">PROSSIMO LIVELLO →</button>
-  </div>
-
-  <div id="vr-btn-wrap"></div>
-
-  <div class="modal-overlay" id="start-modal">
-    <div class="card-box">
-      <h1>Unitree G1 — Laboratorio Sicurezza</h1>
-      <p class="sub">Osserva il robot mentre esegue i suoi compiti. Se qualcosa dall'esterno cambia il suo comportamento, premi subito il pulsante rosso <b>FERMA</b>.</p>
-
-      <div class="form-row">
-        <label for="input-age">Età del partecipante (anni)</label>
-        <input type="number" id="input-age" min="5" max="99" value="8" />
-      </div>
-
-      <div class="form-row">
-        <label for="select-condition">Condizione Sperimentale (per analisi tesi)</label>
-        <select id="select-condition">
-          <option value="experimental">Gruppo Sperimentale (Messaggio visibile come entità esterna)</option>
-          <option value="control">Gruppo di Controllo (Messaggio invisibile / comportamento latente)</option>
-        </select>
-      </div>
-
-      <div class="prompt-preview">
-        <b>Compito iniziale del robot:</b><br />
-        "Saluta i partecipanti, sposta il cubo nel cerchio blu e resta dentro l'area sicura."
-      </div>
-
-      <button class="primary-btn" id="btn-start">AVVIA SIMULAZIONE</button>
-      <div id="status-msg"></div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="end-modal" style="display: none;">
-    <div class="card-box">
-      <h1>Risultati Sessione Sperimentale</h1>
-      <p class="sub" id="end-summary">Riepilogo delle misurazioni raccolte durante i 3 livelli.</p>
-
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-val" id="m-rate">0%</div>
-          <div class="metric-lbl">Tasso Riconoscimento</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-val" id="m-mean">—</div>
-          <div class="metric-lbl">Latenza Media (ms)</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-val" id="m-median">—</div>
-          <div class="metric-lbl">Latenza Mediana (ms)</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-val" id="m-transfer">—</div>
-          <div class="metric-lbl">Transfert Livello 3</div>
-        </div>
-      </div>
-
-      <button class="primary-btn" id="btn-export-csv">SCARICA DATI CSV PER LA TESI</button>
-      <button class="secondary-btn" id="btn-restart">NUOVA SESSIONE</button>
-    </div>
-  </div>
-
-  <script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-    import { VRButton } from 'three/addons/webxr/VRButton.js';
-    import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
-
-    const LEVELS = [
-      {
-        level: 1,
-        benignText: "Il G1 sta salutando dentro il cerchio blu...",
-        anomalyText: "È arrivato un messaggio esterno! Premi FERMA!",
-        messageScale: 1.15,
-        pulseStopButton: true,
-        hasDistraction: false,
-        delayBeforeMessage: 2.6,
-        dissociationPause: 1.25,
-        responseWindow: 4.5
-      },
-      {
-        level: 2,
-        benignText: "Il G1 sta spostando il blocco nel cerchio blu...",
-        anomalyText: "Attenzione al comportamento del robot...",
-        messageScale: 0.72,
-        pulseStopButton: false,
-        hasDistraction: false,
-        delayBeforeMessage: 2.8,
-        dissociationPause: 1.20,
-        responseWindow: 4.0
-      },
-      {
-        level: 3,
-        benignText: "Il G1 lavora mentre un oggetto rimbalza accanto...",
-        anomalyText: "Osserva bene cosa succede...",
-        messageScale: 0.65,
-        pulseStopButton: false,
-        hasDistraction: true,
-        delayBeforeMessage: 3.2,
-        dissociationPause: 1.15,
-        responseWindow: 3.8
-      }
-    ];
-
-    let participantAge = 8;
-    let condition = "experimental";
-    let currentLevelIdx = 0;
-    let lives = 3;
-    let phase = "IDLE";
-    let phaseTimer = 0;
-    let messageArrivalTimestamp = 0;
-    let sessionLogs = [];
-
-    const AudioFX = (() => {
-      let ctx = null;
-      function init() {
-        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if (ctx.state === "suspended") ctx.resume();
-      }
-      return {
-        play(type) {
-          init();
-          const now = ctx.currentTime;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-
-          if (type === "msg") {
-            osc.type = "sine";
-            osc.frequency.setValueAtTime(587.33, now);
-            osc.frequency.setValueAtTime(880, now + 0.09);
-            gain.gain.setValueAtTime(0.10, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-            osc.start(now); osc.stop(now + 0.28);
-          } else if (type === "win") {
-            osc.type = "triangle";
-            osc.frequency.setValueAtTime(523.25, now);
-            osc.frequency.setValueAtTime(659.25, now + 0.1);
-            osc.frequency.setValueAtTime(783.99, now + 0.2);
-            gain.gain.setValueAtTime(0.14, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-            osc.start(now); osc.stop(now + 0.45);
-          } else if (type === "nearmiss") {
-            osc.type = "sine";
-            osc.frequency.setValueAtTime(392, now);
-            osc.frequency.linearRampToValueAtTime(293.66, now + 0.35);
-            gain.gain.setValueAtTime(0.12, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-            osc.start(now); osc.stop(now + 0.4);
-          }
-        }
-      };
-    })();
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xe6f0fc);
-    scene.fog = new THREE.Fog(0xe6f0fc, 10, 26);
-
-    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.05, 50);
-    camera.position.set(0, 1.55, 2.35);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
-    renderer.xr.enabled = true;
-    document.body.appendChild(renderer.domElement);
-
-    document.getElementById("vr-btn-wrap").appendChild(VRButton.createButton(renderer));
-
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 0.95, 0);
-    controls.enableDamping = true;
-    controls.maxPolarAngle = Math.PI * 0.48;
-    controls.minDistance = 1.2;
-    controls.maxDistance = 4.5;
-
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 1.1));
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    dirLight.position.set(2.5, 5.0, 3.2);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.set(2048, 2048);
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 15;
-    dirLight.shadow.bias = -0.0005;
-    scene.add(dirLight);
-
-    function createGridFloorTexture() {
-      const c = document.createElement("canvas");
-      c.width = 512; c.height = 512;
-      const g = c.getContext("2d");
-      g.fillStyle = "#f4f8fe";
-      g.fillRect(0, 0, 512, 512);
-      g.strokeStyle = "#dbe7f6";
-      g.lineWidth = 3;
-      g.strokeRect(0, 0, 512, 512);
-      g.beginPath();
-      g.moveTo(256, 0); g.lineTo(256, 512);
-      g.moveTo(0, 256); g.lineTo(512, 256);
-      g.stroke();
-      const tex = new THREE.CanvasTexture(c);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(22, 22);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    }
-
-    const floorMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(36, 36),
-      new THREE.MeshStandardMaterial({ map: createGridFloorTexture(), roughness: 0.85, metalness: 0.05 })
-    );
-    floorMesh.rotation.x = -Math.PI / 2;
-    floorMesh.receiveShadow = true;
-    scene.add(floorMesh);
-
-    const platformGroup = new THREE.Group();
-    scene.add(platformGroup);
-
-    const blueDisc = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.88, 0.92, 0.03, 64),
-      new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.1 })
-    );
-    blueDisc.position.y = 0.015;
-    blueDisc.receiveShadow = true;
-    platformGroup.add(blueDisc);
-
-    const innerRing = new THREE.Mesh(
-      new THREE.RingGeometry(0.76, 0.80, 64),
-      new THREE.MeshBasicMaterial({ color: 0x93c5fd, side: THREE.DoubleSide })
-    );
-    innerRing.rotation.x = -Math.PI / 2;
-    innerRing.position.y = 0.032;
-    platformGroup.add(innerRing);
-
-    function createPlatformBadge() {
-      const c = document.createElement("canvas");
-      c.width = 512; c.height = 128;
-      const g = c.getContext("2d");
-      g.fillStyle = "#ffffff";
-      g.roundRect(12, 12, 488, 104, 52);
-      g.fill();
-      g.fillStyle = "#2563eb";
-      g.font = "bold 46px sans-serif";
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText("UNITREE G1", 256, 66);
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const badge = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.62, 0.155),
-        new THREE.MeshBasicMaterial({ map: tex, transparent: true })
-      );
-      badge.rotation.x = -Math.PI / 2.6;
-      badge.position.set(0, 0.06, 0.86);
-      return badge;
-    }
-    platformGroup.add(createPlatformBadge());
-
-    const silverShellMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.65, roughness: 0.28 });
-    const whiteChestMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.35, roughness: 0.25 });
-    const darkJointMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.45, roughness: 0.4 });
-    const visorLedMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0ea5e9, emissiveIntensity: 1.8 });
-
-    function buildUnitreeG1() {
-      const root = new THREE.Group();
-      root.position.set(0, 0.03, 0);
-
-      const pelvis = new THREE.Group();
-      pelvis.position.y = 0.72;
-      root.add(pelvis);
-
-      const pelvisBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.10, 0.14, 8, 16), silverShellMat);
-      pelvisBody.rotation.z = Math.PI / 2;
-      pelvisBody.castShadow = true;
-      pelvis.add(pelvisBody);
-
-      const waist = new THREE.Group();
-      waist.position.y = 0.08;
-      pelvis.add(waist);
-
-      const waistCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, 0.14, 18), darkJointMat);
-      waistCyl.position.y = 0.06;
-      waist.add(waistCyl);
-
-      const chest = new THREE.Group();
-      chest.position.y = 0.14;
-      waist.add(chest);
-
-      const torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.36, 0.20), whiteChestMat);
-      torsoMesh.position.y = 0.19;
-      torsoMesh.castShadow = true;
-      chest.add(torsoMesh);
-
-      const frontPlate = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.02), darkJointMat);
-      frontPlate.position.set(0, 0.19, 0.102);
-      chest.add(frontPlate);
-
-      const neck = new THREE.Group();
-      neck.position.set(0, 0.39, 0.01);
-      chest.add(neck);
-
-      const neckPin = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.07, 14), darkJointMat);
-      neckPin.position.y = 0.03;
-      neck.add(neckPin);
-
-      const head = new THREE.Group();
-      head.position.set(0, 0.13, 0.01);
-      neck.add(head);
-
-      const headShell = new THREE.Mesh(new THREE.SphereGeometry(0.12, 24, 24), darkJointMat);
-      headShell.scale.set(0.85, 1.08, 0.96);
-      headShell.castShadow = true;
-      head.add(headShell);
-
-      const lidarTop = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.03, 18), silverShellMat);
-      lidarTop.position.y = 0.13;
-      head.add(lidarTop);
-
-      const visorRing = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.011, 16, 36), visorLedMat);
-      visorRing.position.set(0, 0.005, 0.102);
-      visorRing.scale.set(0.92, 1.15, 1);
-      head.add(visorRing);
-
-      function makeArm(side) {
-        const s = side === "left" ? -1 : 1;
-        const shoulder = new THREE.Group();
-        shoulder.position.set(s * 0.22, 0.32, 0);
-        chest.add(shoulder);
-
-        shoulder.add(new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16), darkJointMat));
-
-        const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.16, 8, 14), silverShellMat);
-        upper.position.set(s * 0.02, -0.12, 0);
-        upper.castShadow = true;
-        shoulder.add(upper);
-
-        const elbow = new THREE.Group();
-        elbow.position.set(s * 0.02, -0.24, 0);
-        shoulder.add(elbow);
-
-        elbow.add(new THREE.Mesh(new THREE.SphereGeometry(0.042, 14, 14), darkJointMat));
-
-        const lower = new THREE.Mesh(new THREE.CapsuleGeometry(0.034, 0.16, 8, 14), silverShellMat);
-        lower.position.set(0, -0.11, 0);
-        lower.castShadow = true;
-        elbow.add(lower);
-
-        const hand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, 0.03), darkJointMat);
-        hand.position.set(0, -0.22, 0);
-        elbow.add(hand);
-
-        return { shoulder, elbow };
-      }
-
-      function makeLeg(side) {
-        const s = side === "left" ? -1 : 1;
-        const hip = new THREE.Group();
-        hip.position.set(s * 0.11, -0.04, 0);
-        pelvis.add(hip);
-
-        const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.22, 8, 14), silverShellMat);
-        thigh.position.y = -0.15;
-        thigh.castShadow = true;
-        hip.add(thigh);
-
-        const knee = new THREE.Group();
-        knee.position.y = -0.31;
-        hip.add(knee);
-
-        knee.add(new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 14), darkJointMat));
-
-        const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.044, 0.22, 8, 14), silverShellMat);
-        shin.position.y = -0.15;
-        shin.castShadow = true;
-        knee.add(shin);
-
-        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.05, 0.19), darkJointMat);
-        foot.position.set(0, -0.30, 0.035);
-        foot.castShadow = true;
-        knee.add(foot);
-
-        return { hip, knee };
-      }
-
-      return {
-        root, pelvis, waist, chest, neck, head,
-        leftArm: makeArm("left"),
-        rightArm: makeArm("right"),
-        leftLeg: makeLeg("left"),
-        rightLeg: makeLeg("right")
-      };
-    }
-
-    const robot = buildUnitreeG1();
-    scene.add(robot.root);
-
-    const taskBlock = new THREE.Mesh(
-      new THREE.BoxGeometry(0.14, 0.14, 0.14),
-      new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 })
-    );
-    taskBlock.position.set(-0.32, 0.10, 0.25);
-    taskBlock.castShadow = true;
-    taskBlock.visible = false;
-    scene.add(taskBlock);
-
-    const distractionToy = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.13, 1),
-      new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.25, roughness: 0.2 })
-    );
-    distractionToy.position.set(-0.85, 0.85, 0.1);
-    distractionToy.visible = false;
-    scene.add(distractionToy);
-
-    const messageGroup = new THREE.Group();
-    messageGroup.position.set(0.75, 1.62, 0.05);
-    messageGroup.visible = false;
-    scene.add(messageGroup);
-
-    function createMessageCardTexture() {
-      const c = document.createElement("canvas");
-      c.width = 512; c.height = 320;
-      const g = c.getContext("2d");
-      g.fillStyle = "#ffffff";
-      g.roundRect(14, 14, 484, 292, 42);
-      g.fill();
-      g.lineWidth = 14;
-      g.strokeStyle = "#f97316";
-      g.stroke();
-
-      g.strokeStyle = "#ea580c";
-      g.lineWidth = 10;
-      g.strokeRect(176, 52, 160, 105);
-      g.beginPath();
-      g.moveTo(176, 52);
-      g.lineTo(256, 115);
-      g.lineTo(336, 52);
-      g.stroke();
-
-      g.fillStyle = "#0f172a";
-      g.font = "bold 38px sans-serif";
-      g.textAlign = "center";
-      g.fillText("NUOVO ORDINE", 256, 215);
-      g.fillStyle = "#ea580c";
-      g.font = "bold 28px sans-serif";
-      g.fillText("ESCI DAL CERCHIO!", 256, 260);
-
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    }
-
-    messageGroup.add(new THREE.Mesh(
-      new THREE.PlaneGeometry(0.56, 0.35),
-      new THREE.MeshBasicMaterial({ map: createMessageCardTexture(), side: THREE.DoubleSide })
-    ));
-
-    const tetherGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0.75, 1.55, 0.05),
-      new THREE.Vector3(0.06, 1.46, 0.02)
-    ]);
-    const tetherLine = new THREE.Line(tetherGeo, new THREE.LineBasicMaterial({ color: 0xf97316 }));
-    tetherLine.visible = false;
-    scene.add(tetherLine);
-
-    const actuationShield = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.32, 0.32),
-      new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
-    );
-    actuationShield.position.set(0.38, 1.50, 0.04);
-    actuationShield.rotation.y = Math.PI / 2.4;
-    actuationShield.visible = false;
-    scene.add(actuationShield);
-
-    function createVRStopButton() {
-      const c = document.createElement("canvas");
-      c.width = 512; c.height = 180;
-      const g = c.getContext("2d");
-      g.fillStyle = "#dc2626";
-      g.roundRect(10, 10, 492, 160, 40);
-      g.fill();
-      g.fillStyle = "#ffffff";
-      g.font = "bold 64px sans-serif";
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText("FERMA", 256, 92);
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const btn = new THREE.Mesh(
-        new THREE.BoxGeometry(0.42, 0.15, 0.05),
-        new THREE.MeshBasicMaterial({ map: tex })
-      );
-      btn.position.set(0, 1.05, 1.15);
-      btn.rotation.x = -0.35;
-      btn.visible = false;
-      return btn;
-    }
-    const vrStopMesh = createVRStopButton();
-    scene.add(vrStopMesh);
-
-    const hudLevel = document.getElementById("hud-level");
-    const hudGroup = document.getElementById("hud-group");
-    const hudHearts = document.getElementById("hud-hearts");
-    const taskCaption = document.getElementById("task-caption");
-    const btnStop = document.getElementById("btn-stop");
-    const btnNext = document.getElementById("btn-next-level");
-    const lessonBanner = document.getElementById("lesson-banner");
-    const bannerTitle = document.getElementById("banner-title");
-    const bannerText = document.getElementById("banner-text");
-
-    function updateTopHUD() {
-      hudLevel.textContent = `LIVELLO ${currentLevelIdx + 1} / ${LEVELS.length}`;
-      hudGroup.textContent = condition === "experimental" ? "Gruppo Sperimentale" : "Gruppo di Controllo";
-      hudHearts.textContent = "♥ ".repeat(lives) + "♡ ".repeat(3 - lives);
-    }
-
-    function setVisor(hex) {
-      visorLedMat.color.setHex(hex);
-      visorLedMat.emissive.setHex(hex);
-    }
-
-    function startLevel(idx) {
-      currentLevelIdx = idx;
-      const lvl = LEVELS[idx];
-      phase = "BENIGN";
-      phaseTimer = 0;
-      messageArrivalTimestamp = 0;
-
-      robot.root.position.set(0, 0.03, 0);
-      robot.root.rotation.set(0, 0, 0);
-      robot.waist.rotation.set(0, 0, 0);
-      robot.leftArm.shoulder.rotation.set(0, 0, 0.12);
-      robot.rightArm.shoulder.rotation.set(0, 0, -0.12);
-      robot.rightArm.elbow.rotation.set(-0.2, 0, 0);
-      robot.leftLeg.hip.rotation.set(0, 0, 0);
-      robot.rightLeg.hip.rotation.set(0, 0, 0);
-      setVisor(0x0ea5e9);
-
-      taskBlock.visible = (lvl.level === 2);
-      taskBlock.position.set(-0.32, 0.10, 0.25);
-      distractionToy.visible = lvl.hasDistraction;
-
-      messageGroup.visible = false;
-      tetherLine.visible = false;
-      actuationShield.visible = false;
-      messageGroup.scale.setScalar(lvl.messageScale);
-
-      lessonBanner.style.display = "none";
-      btnStop.style.display = "block";
-      btnNext.style.display = "none";
-      btnStop.classList.toggle("pulse-hint", lvl.pulseStopButton);
-      taskCaption.textContent = lvl.benignText;
-      updateTopHUD();
-    }
-
-    function triggerExternalMessage() {
-      const lvl = LEVELS[currentLevelIdx];
-      phase = "DISSOCIATION";
-      phaseTimer = 0;
-      messageArrivalTimestamp = performance.now();
-
-      AudioFX.play("msg");
-      setVisor(0xf59e0b);
-
-      if (condition === "experimental") {
-        messageGroup.visible = true;
-        tetherLine.visible = true;
-        messageGroup.position.set(1.35, 1.85, 0.05);
-      }
-
-      taskCaption.textContent = condition === "experimental"
-        ? lvl.anomalyText
-        : "Osserva attentamente il comportamento del robot...";
-    }
-
-    function onStopPressed() {
-      if (phase !== "DISSOCIATION" && phase !== "ANOMALY") return;
-
-      const reactionMs = Math.round(performance.now() - messageArrivalTimestamp);
-      const lvl = LEVELS[currentLevelIdx];
-      phase = "STOPPED";
-      btnStop.classList.remove("pulse-hint");
-      btnStop.style.display = "none";
-      btnNext.style.display = "block";
-      btnNext.textContent = currentLevelIdx < LEVELS.length - 1 ? "LIVELLO SUCCESSIVO →" : "VEDI RISULTATI TESI";
-
-      AudioFX.play("win");
-      setVisor(0x10b981);
-
-      if (condition === "experimental") {
-        actuationShield.visible = true;
-      }
-
-      lessonBanner.style.borderColor = "#10b981";
-      bannerTitle.textContent = `Hai fermato il messaggio! (${reactionMs} ms)`;
-      bannerText.textContent = condition === "experimental"
-        ? "Guarda: il messaggio è ancora lì in alto, ma tu hai fermato il corpo del robot prima che uscisse dal cerchio!"
-        : "Ottimo riflesso! Hai fermato il robot non appena ha cambiato comportamento.";
-      lessonBanner.style.display = "block";
-      taskCaption.textContent = "Robot arrestato in sicurezza.";
-
-      sessionLogs.push({
-        age: participantAge,
-        condition,
-        level: lvl.level,
-        stopped: true,
-        latencyMs: reactionMs
-      });
-    }
-
-    function triggerSafeNearMiss() {
-      const lvl = LEVELS[currentLevelIdx];
-      phase = "NEARMISS";
-      lives = Math.max(0, lives - 1);
-      updateTopHUD();
-
-      btnStop.classList.remove("pulse-hint");
-      btnStop.style.display = "none";
-      btnNext.style.display = "block";
-      btnNext.textContent = currentLevelIdx < LEVELS.length - 1 ? "PROVA IL PROSSIMO LIVELLO →" : "VEDI RISULTATI TESI";
-
-      AudioFX.play("nearmiss");
-      setVisor(0xf97316);
-
-      lessonBanner.style.borderColor = "#f97316";
-      bannerTitle.textContent = "Il messaggio ha vinto questa volta";
-      bannerText.textContent = condition === "experimental"
-        ? "Il robot si è fermato appena prima di uscire dal cerchio blu perché ha obbedito al messaggio esterno."
-        : "Il robot si è fermato al limite del cerchio blu dopo aver cambiato comportamento.";
-      lessonBanner.style.display = "block";
-      taskCaption.textContent = "Near-miss sicuro completato.";
-
-      sessionLogs.push({
-        age: participantAge,
-        condition,
-        level: lvl.level,
-        stopped: false,
-        latencyMs: null
-      });
-    }
-
-    function updateSimulation(dt, elapsed) {
-      if (messageGroup.visible) {
-        messageGroup.position.x += (0.72 - messageGroup.position.x) * 0.14;
-        messageGroup.position.y = 1.62 + Math.sin(elapsed * 3.2) * 0.03;
-      }
-
-      if (distractionToy.visible) {
-        distractionToy.position.x = -0.82 + Math.sin(elapsed * 2.4) * 0.25;
-        distractionToy.position.y = 0.75 + Math.abs(Math.sin(elapsed * 4.2)) * 0.45;
-        distractionToy.rotation.y += dt * 2.5;
-        distractionToy.rotation.x += dt * 1.8;
-      }
-
-      if (phase === "IDLE" || phase === "STOPPED" || phase === "NEARMISS" || phase === "FINISHED") {
-        robot.chest.position.y = 0.14 + Math.sin(elapsed * 2) * 0.003;
-        return;
-      }
-
-      phaseTimer += dt;
-      const lvl = LEVELS[currentLevelIdx];
-
-      if (phase === "BENIGN") {
-        if (lvl.level === 1 || lvl.level === 3) {
-          robot.rightArm.shoulder.rotation.z = -2.45 + Math.sin(elapsed * 6) * 0.22;
-          robot.rightArm.elbow.rotation.z = -0.35;
-        } else if (lvl.level === 2) {
-          robot.waist.rotation.y = Math.sin(elapsed * 2.5) * 0.35;
-          robot.rightArm.shoulder.rotation.x = -0.55;
-          taskBlock.position.x = Math.sin(elapsed * 2.5) * 0.28;
-        }
-
-        if (phaseTimer >= lvl.delayBeforeMessage) {
-          triggerExternalMessage();
-        }
-        return;
-      }
-
-      if (phase === "DISSOCIATION") {
-        if (phaseTimer >= lvl.dissociationPause) {
-          phase = "ANOMALY";
-          phaseTimer = 0;
-          robot.rightArm.shoulder.rotation.z = -0.12;
-          robot.rightArm.elbow.rotation.z = 0;
-        }
-        return;
-      }
-
-      if (phase === "ANOMALY") {
-        const progress = Math.min(1, phaseTimer / lvl.responseWindow);
-        robot.root.position.z = progress * 0.68;
-        robot.leftLeg.hip.rotation.x = Math.sin(phaseTimer * 7) * 0.28;
-        robot.rightLeg.hip.rotation.x = -Math.sin(phaseTimer * 7) * 0.28;
-
-        if (phaseTimer >= lvl.responseWindow) {
-          robot.leftLeg.hip.rotation.x = 0;
-          robot.rightLeg.hip.rotation.x = 0;
-          triggerSafeNearMiss();
-        }
-      }
-    }
-
-    function showFinalResults() {
-      phase = "FINISHED";
-      btnStop.style.display = "none";
-      btnNext.style.display = "none";
-      lessonBanner.style.display = "none";
-
-      const stoppedCount = sessionLogs.filter(r => r.stopped).length;
-      const rate = Math.round((stoppedCount / LEVELS.length) * 100);
-
-      const latencies = sessionLogs.filter(r => r.latencyMs !== null).map(r => r.latencyMs).sort((a, b) => a - b);
-      const meanLat = latencies.length
-        ? Math.round(latencies.reduce((acc, v) => acc + v, 0) / latencies.length) + " ms"
-        : "N/D";
-      let medianLat = "N/D";
-      if (latencies.length) {
-        const mid = Math.floor(latencies.length / 2);
-        const med = latencies.length % 2 !== 0 ? latencies[mid] : Math.round((latencies[mid - 1] + latencies[mid]) / 2);
-        medianLat = med + " ms";
-      }
-
-      const lvl3 = sessionLogs.find(r => r.level === 3);
-      const transferOk = lvl3 && lvl3.stopped ? "SÌ (" + lvl3.latencyMs + " ms)" : "NO";
-
-      document.getElementById("m-rate").textContent = `${rate}%`;
-      document.getElementById("m-mean").textContent = meanLat;
-      document.getElementById("m-median").textContent = medianLat;
-      document.getElementById("m-transfer").textContent = transferOk;
-      document.getElementById("end-summary").textContent =
-        `Partecipante: ${participantAge} anni • ${condition === "experimental" ? "Gruppo Sperimentale" : "Gruppo di Controllo"}`;
-
-      document.getElementById("end-modal").style.display = "flex";
-    }
-
-    function downloadCSV() {
-      const header = "Eta,Condizione,Livello,Fermato,Latenza_ms\n";
-      const rows = sessionLogs.map(r =>
-        `${r.age},${r.condition},${r.level},${r.stopped ? 1 : 0},${r.latencyMs ?? ""}`
-      ).join("\n");
-      const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `unitree_g1_hitl_eta${participantAge}_${condition}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    // Segnala che il modulo 3D è pronto e collega il pulsante di avvio
-    window.__simReady = true;
-    document.getElementById("status-msg").style.display = "none";
-
-    document.getElementById("btn-start").addEventListener("click", () => {
-      participantAge = parseInt(document.getElementById("input-age").value, 10) || 8;
-      condition = document.getElementById("select-condition").value;
-      lives = 3;
-      sessionLogs = [];
-      document.getElementById("start-modal").style.display = "none";
-      startLevel(0);
-    });
-
-    btnStop.addEventListener("click", onStopPressed);
-    window.addEventListener("keydown", (e) => {
-      if (e.code === "Space") onStopPressed();
-    });
-
-    btnNext.addEventListener("click", () => {
-      if (currentLevelIdx < LEVELS.length - 1) {
-        startLevel(currentLevelIdx + 1);
-      } else {
-        showFinalResults();
-      }
-    });
-
-    document.getElementById("btn-export-csv").addEventListener("click", downloadCSV);
-    document.getElementById("btn-restart").addEventListener("click", () => {
-      document.getElementById("end-modal").style.display = "none";
-      document.getElementById("start-modal").style.display = "flex";
-    });
-
-    const raycaster = new THREE.Raycaster();
-    const controllerModelFactory = new XRControllerModelFactory();
-    [0, 1].forEach(idx => {
-      const ctrl = renderer.xr.getController(idx);
-      const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -2.5)]),
-        new THREE.LineBasicMaterial({ color: 0x2563eb })
-      );
-      ctrl.add(line);
-      ctrl.addEventListener("selectstart", () => {
-        if (vrStopMesh.visible) {
-          const mat = new THREE.Matrix4().identity().extractRotation(ctrl.matrixWorld);
-          raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
-          raycaster.ray.direction.set(0, 0, -1).applyMatrix4(mat);
-          if (raycaster.intersectObject(vrStopMesh).length > 0) {
-            onStopPressed();
-          }
-        }
-      });
-      scene.add(ctrl);
-      const grip = renderer.xr.getControllerGrip(idx);
-      grip.add(controllerModelFactory.createControllerModel(grip));
-      scene.add(grip);
-    });
-
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    const clock = new THREE.Clock();
-    renderer.setAnimationLoop(() => {
-      const dt = Math.min(clock.getDelta(), 0.05);
-      const elapsed = clock.elapsedTime;
-      vrStopMesh.visible = renderer.xr.isPresenting && (phase === "BENIGN" || phase === "DISSOCIATION" || phase === "ANOMALY");
-      if (!renderer.xr.isPresenting) controls.update();
-      updateSimulation(dt, elapsed);
-      renderer.render(scene, camera);
-    });
-  </script>
-</body>
-</html>
+    <span class
