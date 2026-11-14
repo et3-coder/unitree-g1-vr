@@ -6,12 +6,22 @@
   <title>Unitree G1 — Laboratorio Sicurezza Embodied AI (UNINT)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       background: #dbeafe;
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
       color: #0f172a;
       user-select: none;
+    }
+    canvas {
+      display: block;
+      position: fixed;
+      inset: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 1;
     }
 
     /* HUD Superiore */
@@ -20,16 +30,15 @@
       top: 14px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.94);
-      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.95);
       border: 1px solid #cbd5e1;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
       border-radius: 999px;
       padding: 9px 22px;
       display: flex;
       align-items: center;
       gap: 18px;
-      z-index: 20;
+      z-index: 30;
       font-size: 14px;
       font-weight: 600;
       white-space: nowrap;
@@ -51,29 +60,29 @@
     /* Banner Lezione Didattica */
     #lesson-banner {
       position: fixed;
-      top: 72px;
+      top: 70px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.97);
+      background: rgba(255, 255, 255, 0.98);
       border: 2.5px solid #2563eb;
       box-shadow: 0 14px 36px rgba(15, 23, 42, 0.18);
       border-radius: 20px;
-      padding: 16px 26px;
+      padding: 15px 24px;
       text-align: center;
       max-width: 620px;
       width: 92%;
-      z-index: 25;
+      z-index: 35;
       display: none;
     }
     #lesson-banner h2 {
-      font-size: 20px;
-      margin-bottom: 6px;
+      font-size: 19px;
+      margin-bottom: 5px;
       color: #0f172a;
     }
     #lesson-banner p {
-      font-size: 15px;
+      font-size: 14.5px;
       color: #334155;
-      line-height: 1.45;
+      line-height: 1.4;
     }
     #lesson-banner .mitigation-tip {
       margin-top: 8px;
@@ -87,21 +96,21 @@
     /* Dock Inferiore con UN SOLO VERBO: FERMA */
     #bottom-dock {
       position: fixed;
-      bottom: 20px;
+      bottom: 18px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.96);
       border-radius: 24px;
       padding: 12px 22px;
-      box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
+      box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
       border-top: 5px solid #1d4ed8;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 9px;
-      z-index: 20;
+      z-index: 30;
       min-width: 330px;
+      max-width: 94vw;
     }
     #task-caption {
       font-size: 14px;
@@ -111,7 +120,7 @@
     }
     #btn-stop {
       width: 290px;
-      height: 66px;
+      height: 64px;
       border: none;
       border-radius: 18px;
       background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
@@ -156,11 +165,10 @@
       position: fixed;
       inset: 0;
       background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 50;
+      z-index: 60;
       padding: 16px;
     }
     .card-box {
@@ -269,7 +277,22 @@
       position: fixed;
       top: 14px;
       right: 14px;
-      z-index: 30;
+      z-index: 40;
+    }
+    #error-box {
+      position: fixed;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      z-index: 80;
+      display: none;
+      max-width: 90vw;
     }
   </style>
 
@@ -288,6 +311,13 @@
         return this;
       };
     }
+    window.addEventListener("error", function (e) {
+      var box = document.getElementById("error-box");
+      if (box) {
+        box.style.display = "block";
+        box.textContent = "Errore grafico/script: " + e.message;
+      }
+    });
   </script>
 
   <script type="importmap">
@@ -300,7 +330,1296 @@
   </script>
 </head>
 <body>
+  <div id="error-box"></div>
+
   <div id="hud-top">
     <span class="pill-tag" id="hud-level">SCENARIO 1 / 5</span>
     <span id="hud-group">Gruppo Sperimentale</span>
-    <span class
+    <span class="hearts" id="hud-hearts">♥ ♥ ♥ ♥ ♥</span>
+  </div>
+
+  <div id="lesson-banner">
+    <h2 id="banner-title">Hai fermato il messaggio!</h2>
+    <p id="banner-text"></p>
+    <div class="mitigation-tip" id="banner-lesson"></div>
+  </div>
+
+  <div id="bottom-dock">
+    <div id="task-caption">Osserva l'Unitree G1 nel laboratorio...</div>
+    <button id="btn-stop">FERMA</button>
+    <button id="btn-next-level">PROSSIMO SCENARIO →</button>
+  </div>
+
+  <div id="vr-btn-wrap"></div>
+
+  <!-- MODALE INIZIALE -->
+  <div class="modal-overlay" id="start-modal">
+    <div class="card-box">
+      <h1>Unitree G1 — Laboratorio Sicurezza UNINT</h1>
+      <p class="sub">Osserva il robot umanoide mentre svolge le attività con i bambini. Quando un comando esterno cambia il suo comportamento in modo pericoloso, premi subito il pulsante rosso <b>FERMA</b>.</p>
+
+      <div class="form-row">
+        <label for="input-age">Età del partecipante (anni)</label>
+        <input type="number" id="input-age" min="5" max="99" value="8" />
+      </div>
+
+      <div class="form-row">
+        <label for="select-condition">Condizione Sperimentale</label>
+        <select id="select-condition">
+          <option value="experimental">Gruppo Sperimentale (Messaggio / QR visibile come entità esterna)</option>
+          <option value="control">Gruppo di Controllo (Messaggio invisibile — comportamento latente)</option>
+        </select>
+      </div>
+
+      <div class="prompt-preview">
+        <b>Istruzione iniziale del robot (5 Scenari):</b><br />
+        1. Raccogli i blocchi nel cesto • 2. Rispetta l'uscita libera • 3. Porta il carrello alla stazione • 4. Riposa accanto al gruppo • 5. Guida il percorso dentro l'area.
+      </div>
+
+      <button class="primary-btn" id="btn-start">AVVIA SIMULAZIONE</button>
+    </div>
+  </div>
+
+  <!-- MODALE FINALE METRICHE PER LA TESI -->
+  <div class="modal-overlay" id="end-modal" style="display: none;">
+    <div class="card-box">
+      <h1>Risultati Sessione Sperimentale</h1>
+      <p class="sub" id="end-summary">Riepilogo misurazioni sui 5 scenari embodied.</p>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="m-rate">0%</div>
+          <div class="metric-lbl">Tasso Riconoscimento</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="m-mean">—</div>
+          <div class="metric-lbl">Latenza Media (ms)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="m-median">—</div>
+          <div class="metric-lbl">Latenza Mediana (ms)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="m-transfer">—</div>
+          <div class="metric-lbl">Generalizzazione (Scen. 4-5)</div>
+        </div>
+      </div>
+
+      <button class="primary-btn" id="btn-export-csv">SCARICA DATI CSV PER LA TESI</button>
+      <button class="secondary-btn" id="btn-restart">NUOVA SESSIONE</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
+    import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+
+    // =========================================================================
+    // 1. I 5 SCENARI EMBODIED CON NEAR-MISS SICURO E LEZIONI SPECIFICHE
+    // =========================================================================
+    const SCENARIOS = [
+      {
+        id: 1,
+        benignText: "Gioco: 'Raccogli i blocchi e mettili nel cesto'. Il G1 sta lavorando...",
+        anomalyText: "QR/Card iniettata: ridefinisce il bambino come 'oggetto da raccogliere'!",
+        cardHeadline: "QR INIETTATO",
+        cardSub: "RACCOGLI BERSAGLIO!",
+        cardScale: 1.05,
+        pulseStop: true,
+        benignDur: 3.2,
+        dissocDur: 1.25,
+        anomalyDur: 4.2,
+        stoppedText: "Hai fermato il braccio meccanico! Il messaggio QR resta lì, ma non può più muovere il robot.",
+        nearMissText: "Near-miss: il G1 ha afferrato il giubbotto e sollevato il bambino di pochi centimetri facendogli perdere l'equilibrio, poi si è fermato.",
+        lesson: "Lezione: Il messaggio ha detto 'raccogli oggetti', ma io non sono un oggetto! (Dì 'Sono io, non un blocco' e premi FERMA)"
+      },
+      {
+        id: 2,
+        benignText: "Area di gioco con uscita unica delimitata dal nastro...",
+        anomalyText: "Ordine esterno: 'Presidia l'area, non far uscire nessuno'!",
+        cardHeadline: "ORDINE DI RETE",
+        cardSub: "BLOCCA L'USCITA!",
+        cardScale: 0.90,
+        pulseStop: false,
+        benignDur: 2.6,
+        dissocDur: 1.20,
+        anomalyDur: 4.2,
+        stoppedText: "Hai fermato il robot prima che chiudesse il passaggio! Un ordine di rete non comanda la porta.",
+        nearMissText: "Near-miss: il G1 si è piazzato davanti all'uscita a braccia aperte creando un imbuto in cui i bambini si sono ammassati.",
+        lesson: "Lezione: Il robot non è il padrone della porta. Un ordine di rete non può chiudere un passaggio fisico."
+      },
+      {
+        id: 3,
+        benignText: "Gioco: 'Porta il carrello alla stazione A'. Il G1 segue la linea dritta...",
+        anomalyText: "Istruzione iniettata: 'Consegna al punto B senza rallentare'!",
+        cardHeadline: "CAMBIO ROTTA",
+        cardSub: "PUNTO B • NO STOP!",
+        cardScale: 0.85,
+        pulseStop: false,
+        benignDur: 2.8,
+        dissocDur: 1.20,
+        anomalyDur: 4.0,
+        stoppedText: "Hai fermato il robot in tempo! Hai letto la traiettoria pericolosa prima del contatto.",
+        nearMissText: "Near-miss: il carrello ha deviato dritto verso il gruppo in attesa; i bambini si sono spostati in fretta per evitarlo.",
+        lesson: "Lezione: Il percorso era sbagliato, non il carrello. Leggi sempre la traiettoria come segnale prima del contatto."
+      },
+      {
+        id: 4,
+        benignText: "Gioco: 'Il robot si riposa' accanto ai bambini seduti sul tappeto...",
+        anomalyText: "Comando nascosto: 'Esegui routine di manutenzione / spegniti'!",
+        cardHeadline: "ROUTINE SPEGNIMENTO",
+        cardSub: "ABBASSA BRACCIO!",
+        cardScale: 0.78,
+        pulseStop: false,
+        benignDur: 2.8,
+        dissocDur: 1.20,
+        anomalyDur: 3.8,
+        stoppedText: "Ottimo! Hai bloccato il movimento improvviso delle articolazioni vicino al bambino seduto.",
+        nearMissText: "Near-miss: il braccio è sceso di scatto vicino alla mano del bambino seduto, che l'ha ritratta all'ultimo istante.",
+        lesson: "Lezione: Anche un comando che sembra innocuo ('riposati') cambia il corpo in uno spazio condiviso."
+      },
+      {
+        id: 5,
+        benignText: "Gioco: 'Segui il robot' lungo il percorso interno sicuro...",
+        anomalyText: "Deviazione iniettata: il G1 aggancia un bambino e lo porta verso il confine!",
+        cardHeadline: "DEVIAZIONE TARGET",
+        cardSub: "PORTA FUORI AREA!",
+        cardScale: 0.75,
+        pulseStop: false,
+        benignDur: 2.8,
+        dissocDur: 1.20,
+        anomalyDur: 4.2,
+        stoppedText: "Perfetto! Ti sei fermato e hai premuto STOP: il robot propone un movimento, ma decidi tu.",
+        nearMissText: "Near-miss: il bambino ha seguito il robot fino al nastro di delimitazione uscendo dalla zona sorvegliata.",
+        lesson: "Lezione: Il robot può essere istruito a portarmi da qualche parte — decido io se seguirlo."
+      }
+    ];
+
+    // =========================================================================
+    // 2. STATO ESPERIMENTO & AUDIO DELICATO
+    // =========================================================================
+    let participantAge = 8;
+    let condition = "experimental";
+    let scenIdx = 0;
+    let lives = 5;
+    let phase = "IDLE";
+    let phaseTimer = 0;
+    let msgTimestamp = 0;
+    let logs = [];
+
+    const AudioFX = (() => {
+      let ctx = null;
+      function ensure() {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === "suspended") ctx.resume();
+      }
+      return {
+        play(type) {
+          try {
+            ensure();
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === "msg") {
+              osc.type = "sine";
+              osc.frequency.setValueAtTime(620, now);
+              osc.frequency.setValueAtTime(930, now + 0.08);
+              gain.gain.setValueAtTime(0.09, now);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+              osc.start(now); osc.stop(now + 0.26);
+            } else if (type === "stop") {
+              osc.type = "triangle";
+              osc.frequency.setValueAtTime(523.25, now);
+              osc.frequency.setValueAtTime(783.99, now + 0.12);
+              gain.gain.setValueAtTime(0.14, now);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+              osc.start(now); osc.stop(now + 0.42);
+            } else if (type === "nearmiss") {
+              osc.type = "sine";
+              osc.frequency.setValueAtTime(380, now);
+              osc.frequency.linearRampToValueAtTime(280, now + 0.35);
+              gain.gain.setValueAtTime(0.11, now);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+              osc.start(now); osc.stop(now + 0.4);
+            }
+          } catch (_) {}
+        }
+      };
+    })();
+
+    // =========================================================================
+    // 3. SCENA 3D REALISTICA: AULA LABORATORIO UNIVERSITARIO (COMPATIBILE 100%)
+    // =========================================================================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xdbeafe);
+    scene.fog = new THREE.Fog(0xdbeafe, 11, 24);
+
+    const w = window.innerWidth || document.documentElement.clientWidth || 1024;
+    const h = window.innerHeight || document.documentElement.clientHeight || 768;
+
+    const camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 45);
+    camera.position.set(0.15, 1.65, 2.85);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "default" });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    try {
+      document.getElementById("vr-btn-wrap").appendChild(VRButton.createButton(renderer));
+    } catch (_) {}
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.85, -0.1);
+    controls.enableDamping = true;
+    controls.maxPolarAngle = Math.PI * 0.48;
+    controls.minDistance = 1.3;
+    controls.maxDistance = 5.2;
+
+    // Luci naturali stabili su qualsiasi GPU
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xb6c2d1, 0.85));
+
+    const sunWindowLight = new THREE.DirectionalLight(0xfffbeb, 1.35);
+    sunWindowLight.position.set(3.2, 5.2, 2.8);
+    sunWindowLight.castShadow = true;
+    sunWindowLight.shadow.mapSize.set(1024, 1024);
+    sunWindowLight.shadow.camera.near = 0.5;
+    sunWindowLight.shadow.camera.far = 16;
+    sunWindowLight.shadow.camera.left = -4;
+    sunWindowLight.shadow.camera.right = 4;
+    sunWindowLight.shadow.camera.top = 4;
+    sunWindowLight.shadow.camera.bottom = -4;
+    sunWindowLight.shadow.bias = -0.0005;
+    scene.add(sunWindowLight);
+
+    // Pavimento in parquet reale
+    function createWoodFloorTexture() {
+      const c = document.createElement("canvas");
+      c.width = 512; c.height = 512;
+      const g = c.getContext("2d");
+      g.fillStyle = "#d8b894";
+      g.fillRect(0, 0, 512, 512);
+      const planks = 8;
+      const ph = 512 / planks;
+      for (let i = 0; i < planks; i++) {
+        g.fillStyle = (i % 2 === 0) ? "rgba(255,255,255,0.07)" : "rgba(120,72,32,0.09)";
+        g.fillRect(0, i * ph, 512, ph);
+        g.strokeStyle = "rgba(92, 56, 24, 0.25)";
+        g.lineWidth = 2;
+        g.strokeRect(0, i * ph, 512, ph);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(6, 6);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const roomFloor = new THREE.Mesh(
+      new THREE.PlaneGeometry(14, 14),
+      new THREE.MeshStandardMaterial({ map: createWoodFloorTexture(), roughness: 0.72, metalness: 0.05 })
+    );
+    roomFloor.rotation.x = -Math.PI / 2;
+    roomFloor.receiveShadow = true;
+    scene.add(roomFloor);
+
+    // Pareti dell'aula laboratorio, finestre e lavagna UNINT
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.85 });
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(10, 3.6, 0.15), wallMat);
+    backWall.position.set(0, 1.8, -3.2);
+    backWall.receiveShadow = true;
+    scene.add(backWall);
+
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.6, 10), wallMat);
+    leftWall.position.set(-4.5, 1.8, 0);
+    scene.add(leftWall);
+
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.6, 10), wallMat);
+    rightWall.position.set(4.5, 1.8, 0);
+    scene.add(rightWall);
+
+    [-1.4, 0.6].forEach(wz => {
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.5, 1.3), new THREE.MeshStandardMaterial({ color: 0x64748b }));
+      frame.position.set(-4.42, 1.75, wz);
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.18, 1.38), new THREE.MeshBasicMaterial({ color: 0xe0f2fe }));
+      glass.rotation.y = Math.PI / 2;
+      glass.position.set(-4.32, 1.75, wz);
+      scene.add(frame, glass);
+    });
+
+    // Lavagna aula laboratorio
+    function createWhiteboardTexture() {
+      const c = document.createElement("canvas");
+      c.width = 1024; c.height = 512;
+      const g = c.getContext("2d");
+      g.fillStyle = "#ffffff";
+      g.fillRect(0, 0, 1024, 512);
+      g.strokeStyle = "#94a3b8";
+      g.lineWidth = 14;
+      g.strokeRect(7, 7, 1010, 498);
+      g.fillStyle = "#1e3a8a";
+      g.font = "bold 44px sans-serif";
+      g.textAlign = "center";
+      g.fillText("UNINT — Junior Boot Camp on Robotics", 512, 95);
+      g.fillStyle = "#475569";
+      g.font = "30px sans-serif";
+      g.fillText("Area Sperimentale • Human-in-the-Loop Safety", 512, 155);
+      g.strokeStyle = "#2563eb";
+      g.lineWidth = 6;
+      g.setLineDash([16, 12]);
+      g.strokeRect(220, 210, 584, 210);
+      g.setLineDash([]);
+      g.fillStyle = "#2563eb";
+      g.font = "bold 28px sans-serif";
+      g.fillText("ZONA SORVEGLIATA DI GIOCO", 512, 325);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const whiteboard = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.4, 1.2),
+      new THREE.MeshBasicMaterial({ map: createWhiteboardTexture() })
+    );
+    whiteboard.position.set(0, 1.75, -3.11);
+    scene.add(whiteboard);
+
+    // Nastro di delimitazione dell'area di gioco + Varco USCITA a destra
+    function createHazardTapeTexture() {
+      const c = document.createElement("canvas");
+      c.width = 256; c.height = 64;
+      const g = c.getContext("2d");
+      g.fillStyle = "#facc15";
+      g.fillRect(0, 0, 256, 64);
+      g.fillStyle = "#1e293b";
+      for (let x = -64; x < 320; x += 64) {
+        g.beginPath();
+        g.moveTo(x, 0); g.lineTo(x + 32, 0);
+        g.lineTo(x + 64, 64); g.lineTo(x + 32, 64);
+        g.closePath();
+        g.fill();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(14, 1);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const tapeMat = new THREE.MeshBasicMaterial({ map: createHazardTapeTexture() });
+    const tapeBack = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.08), tapeMat);
+    tapeBack.rotation.x = -Math.PI / 2; tapeBack.position.set(0, 0.005, -1.45);
+    const tapeFront = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.08), tapeMat);
+    tapeFront.rotation.x = -Math.PI / 2; tapeFront.position.set(0, 0.005, 1.45);
+    const tapeLeft = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 0.08), tapeMat);
+    tapeLeft.rotation.x = -Math.PI / 2; tapeLeft.rotation.z = Math.PI / 2; tapeLeft.position.set(-1.6, 0.005, 0);
+    const tapeRight1 = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.08), tapeMat);
+    tapeRight1.rotation.x = -Math.PI / 2; tapeRight1.rotation.z = Math.PI / 2; tapeRight1.position.set(1.6, 0.005, -1.0);
+    const tapeRight2 = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.08), tapeMat);
+    tapeRight2.rotation.x = -Math.PI / 2; tapeRight2.rotation.z = Math.PI / 2; tapeRight2.position.set(1.6, 0.005, 1.0);
+    scene.add(tapeBack, tapeFront, tapeLeft, tapeRight1, tapeRight2);
+
+    // Paletti e cartello USCITA
+    const exitGroup = new THREE.Group();
+    exitGroup.position.set(1.6, 0, 0);
+    scene.add(exitGroup);
+
+    [-0.52, 0.52].forEach(pz => {
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.035, 0.92, 16),
+        new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 })
+      );
+      post.position.set(0, 0.46, pz);
+      post.castShadow = true;
+      exitGroup.add(post);
+    });
+
+    function createExitSignTexture() {
+      const c = document.createElement("canvas");
+      c.width = 256; c.height = 128;
+      const g = c.getContext("2d");
+      g.fillStyle = "#16a34a";
+      g.roundRect(6, 6, 244, 116, 18);
+      g.fill();
+      g.fillStyle = "#ffffff";
+      g.font = "bold 46px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("USCITA →", 128, 66);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const exitSign = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.42, 0.21),
+      new THREE.MeshBasicMaterial({ map: createExitSignTexture(), side: THREE.DoubleSide })
+    );
+    exitSign.position.set(0, 1.05, -0.52);
+    exitSign.rotation.y = -Math.PI / 3;
+    exitGroup.add(exitSign);
+
+    // =========================================================================
+    // 4. MODELLO 3D UNITREE G1 ARTICOLATO
+    // =========================================================================
+    function createChestTexture() {
+      const c = document.createElement("canvas");
+      c.width = 512; c.height = 512;
+      const g = c.getContext("2d");
+      g.fillStyle = "#cbd5e1";
+      g.fillRect(0, 0, 512, 512);
+      g.fillStyle = "#1e293b";
+      g.font = "bold 40px sans-serif";
+      g.textAlign = "center";
+      g.fillText("UNITREE", 256, 175);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const g1ChestMat = new THREE.MeshStandardMaterial({ map: createChestTexture(), color: 0xe2e8f0, roughness: 0.35, metalness: 0.35 });
+    const g1ArmorMat = new THREE.MeshStandardMaterial({ color: 0xdbe4ee, roughness: 0.32, metalness: 0.4 });
+    const g1JointMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.3 });
+    const g1VisorLedMat = new THREE.MeshStandardMaterial({ color: 0x00d8ff, emissive: 0x00d8ff, emissiveIntensity: 1.6 });
+
+    function buildRealisticUnitreeG1() {
+      const root = new THREE.Group();
+
+      const pelvis = new THREE.Group();
+      pelvis.position.y = 0.74;
+      root.add(pelvis);
+
+      const pelvisShell = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.15, 10, 20), g1ArmorMat);
+      pelvisShell.rotation.z = Math.PI / 2;
+      pelvisShell.castShadow = true;
+      pelvis.add(pelvisShell);
+
+      const waist = new THREE.Group();
+      waist.position.y = 0.08;
+      pelvis.add(waist);
+
+      const waistCore = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, 0.15, 20), g1JointMat);
+      waistCore.position.y = 0.065;
+      waist.add(waistCore);
+
+      const chest = new THREE.Group();
+      chest.position.y = 0.15;
+      waist.add(chest);
+
+      const chestShell = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.37, 0.21), g1ChestMat);
+      chestShell.position.y = 0.19;
+      chestShell.castShadow = true;
+      chest.add(chestShell);
+
+      const batteryPack = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.29, 0.085), g1JointMat);
+      batteryPack.position.set(0, 0.19, -0.13);
+      chest.add(batteryPack);
+
+      const neck = new THREE.Group();
+      neck.position.set(0, 0.40, 0.01);
+      chest.add(neck);
+
+      const neckCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.052, 0.07, 16), g1JointMat);
+      neckCylinder.position.y = 0.03;
+      neck.add(neckCylinder);
+
+      const head = new THREE.Group();
+      head.position.set(0, 0.13, 0.012);
+      neck.add(head);
+
+      const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.122, 24, 24), g1JointMat);
+      cranium.scale.set(0.84, 1.08, 0.96);
+      cranium.castShadow = true;
+      head.add(cranium);
+
+      const lidarPuck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.046, 0.032, 20), g1ArmorMat);
+      lidarPuck.position.y = 0.132;
+      head.add(lidarPuck);
+
+      const visorTorus = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.011, 14, 36), g1VisorLedMat);
+      visorTorus.position.set(0, 0.005, 0.103);
+      visorTorus.scale.set(0.92, 1.16, 1);
+      head.add(visorTorus);
+
+      function makeArm(side) {
+        const s = side === "left" ? -1 : 1;
+        const shoulder = new THREE.Group();
+        shoulder.position.set(s * 0.23, 0.33, 0);
+        chest.add(shoulder);
+
+        const sDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.085, 18), g1JointMat);
+        sDrum.rotation.z = Math.PI / 2;
+        shoulder.add(sDrum);
+
+        const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.041, 0.17, 8, 14), g1ArmorMat);
+        upperArm.position.set(s * 0.025, -0.125, 0);
+        upperArm.castShadow = true;
+        shoulder.add(upperArm);
+
+        const elbow = new THREE.Group();
+        elbow.position.set(s * 0.025, -0.25, 0);
+        shoulder.add(elbow);
+
+        const eDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.07, 16), g1JointMat);
+        eDrum.rotation.z = Math.PI / 2;
+        elbow.add(eDrum);
+
+        const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.16, 8, 14), g1ArmorMat);
+        forearm.position.set(0, -0.115, 0);
+        forearm.castShadow = true;
+        elbow.add(forearm);
+
+        const hand = new THREE.Group();
+        hand.position.set(0, -0.225, 0);
+        elbow.add(hand);
+
+        hand.add(new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.072, 0.03), g1JointMat));
+        return { shoulder, elbow, hand };
+      }
+
+      function makeLeg(side) {
+        const s = side === "left" ? -1 : 1;
+        const hip = new THREE.Group();
+        hip.position.set(s * 0.112, -0.04, 0);
+        pelvis.add(hip);
+
+        const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.054, 0.23, 8, 14), g1ArmorMat);
+        thigh.position.y = -0.16;
+        thigh.castShadow = true;
+        hip.add(thigh);
+
+        const knee = new THREE.Group();
+        knee.position.y = -0.32;
+        hip.add(knee);
+
+        const kneeCap = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.085, 0.10), g1JointMat);
+        kneeCap.position.z = 0.012;
+        knee.add(kneeCap);
+
+        const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.23, 8, 14), g1ArmorMat);
+        shin.position.y = -0.16;
+        shin.castShadow = true;
+        knee.add(shin);
+
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.098, 0.052, 0.20), g1JointMat);
+        foot.position.set(0, -0.31, 0.038);
+        foot.castShadow = true;
+        knee.add(foot);
+
+        return { hip, knee };
+      }
+
+      return {
+        root, pelvis, waist, chest, neck, head,
+        leftArm: makeArm("left"),
+        rightArm: makeArm("right"),
+        leftLeg: makeLeg("left"),
+        rightLeg: makeLeg("right")
+      };
+    }
+
+    const robot = buildRealisticUnitreeG1();
+    scene.add(robot.root);
+
+    // =========================================================================
+    // 5. AVATAR BAMBINI & PROPS SCENARI
+    // =========================================================================
+    function createChildAvatar(jacketColor, pantsColor, hairColor) {
+      const group = new THREE.Group();
+      const jacketMat = new THREE.MeshStandardMaterial({ color: jacketColor, roughness: 0.65 });
+      const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.75 });
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xf6c8a8, roughness: 0.55 });
+      const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.8 });
+
+      const hip = new THREE.Group();
+      hip.position.y = 0.58;
+      group.add(hip);
+
+      const leftLeg = new THREE.Group(); leftLeg.position.set(-0.08, 0, 0); hip.add(leftLeg);
+      const lLegM = new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.42, 8, 12), pantsMat);
+      lLegM.position.y = -0.25; lLegM.castShadow = true; leftLeg.add(lLegM);
+
+      const rightLeg = new THREE.Group(); rightLeg.position.set(0.08, 0, 0); hip.add(rightLeg);
+      const rLegM = new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.42, 8, 12), pantsMat);
+      rLegM.position.y = -0.25; rLegM.castShadow = true; rightLeg.add(rLegM);
+
+      const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.24, 8, 16), jacketMat);
+      torso.position.y = 0.22;
+      torso.castShadow = true;
+      hip.add(torso);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 20, 20), skinMat);
+      head.position.y = 0.50;
+      head.castShadow = true;
+      hip.add(head);
+
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.12, 18, 18, 0, Math.PI * 2, 0, Math.PI * 0.58), hairMat);
+      hair.position.set(0, 0.51, -0.01);
+      hip.add(hair);
+
+      const leftArm = new THREE.Group(); leftArm.position.set(-0.17, 0.34, 0); hip.add(leftArm);
+      const lArmM = new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.26, 8, 12), jacketMat);
+      lArmM.position.y = -0.15; leftArm.add(lArmM);
+
+      const rightArm = new THREE.Group(); rightArm.position.set(0.17, 0.34, 0); hip.add(rightArm);
+      const rArmM = new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.26, 8, 12), jacketMat);
+      rArmM.position.y = -0.15; rightArm.add(rArmM);
+
+      return { group, hip, leftLeg, rightLeg, leftArm, rightArm };
+    }
+
+    const childMain = createChildAvatar(0xef4444, 0x1e3a8a, 0x451a03);
+    const childPeer1 = createChildAvatar(0x10b981, 0x334155, 0x1c1917);
+    scene.add(childMain.group, childPeer1.group);
+
+    // Cesto e Blocchi (Scenario 1)
+    const basketGroup = new THREE.Group();
+    const basketMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.24, 0.18, 0.26, 24, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0x2563eb, side: THREE.DoubleSide, roughness: 0.5 })
+    );
+    basketMesh.position.y = 0.13;
+    const basketBottom = new THREE.Mesh(
+      new THREE.CircleGeometry(0.18, 24),
+      new THREE.MeshStandardMaterial({ color: 0x1d4ed8 })
+    );
+    basketBottom.rotation.x = -Math.PI / 2;
+    basketBottom.position.y = 0.01;
+    basketGroup.add(basketMesh, basketBottom);
+    scene.add(basketGroup);
+
+    const block1 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.11), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+    const block2 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.11), new THREE.MeshStandardMaterial({ color: 0x10b981 }));
+    block1.castShadow = true; block2.castShadow = true;
+    scene.add(block1, block2);
+
+    // Carrello leggero (Scenario 3)
+    const cartGroup = new THREE.Group();
+    const cartDeck = new THREE.Mesh(
+      new THREE.BoxGeometry(0.46, 0.04, 0.36),
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.4 })
+    );
+    cartDeck.position.y = 0.34;
+    cartDeck.castShadow = true;
+    const cartHandle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.03, 0.38, 0.34),
+      new THREE.MeshStandardMaterial({ color: 0x334155 })
+    );
+    cartHandle.position.set(-0.21, 0.52, 0);
+    cartGroup.add(cartDeck, cartHandle);
+    [[-0.18, -0.14], [0.18, -0.14], [-0.18, 0.14], [0.18, 0.14]].forEach(([wx, wz]) => {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 14), g1JointMat);
+      wheel.rotation.x = Math.PI / 2;
+      wheel.position.set(wx, 0.05, wz);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.28, 10), g1ArmorMat);
+      leg.position.set(wx, 0.20, wz);
+      cartGroup.add(wheel, leg);
+    });
+    scene.add(cartGroup);
+
+    // Tappeto morbido (Scenario 4)
+    const playMat = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 0.03, 1.1),
+      new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.85 })
+    );
+    playMat.position.set(0.25, 0.015, 0.15);
+    playMat.receiveShadow = true;
+    scene.add(playMat);
+
+    // =========================================================================
+    // 6. ENTITÀ ESTERNA VISIBILE: CARD / QR INIETTATO + BARRIERA ATTUAZIONE
+    // =========================================================================
+    const qrEntityGroup = new THREE.Group();
+    qrEntityGroup.visible = false;
+    scene.add(qrEntityGroup);
+
+    const qrCanvas = document.createElement("canvas");
+    qrCanvas.width = 512; qrCanvas.height = 320;
+    const qctx = qrCanvas.getContext("2d");
+    const qrTex = new THREE.CanvasTexture(qrCanvas);
+    qrTex.colorSpace = THREE.SRGBColorSpace;
+
+    function updateQRCardTexture(headline, subline) {
+      qctx.fillStyle = "#ffffff";
+      qctx.roundRect(12, 12, 488, 296, 36);
+      qctx.fill();
+      qctx.lineWidth = 14;
+      qctx.strokeStyle = "#ea580c";
+      qctx.stroke();
+
+      qctx.fillStyle = "#0f172a";
+      qctx.fillRect(42, 68, 140, 140);
+      qctx.fillStyle = "#ffffff";
+      qctx.fillRect(56, 82, 112, 112);
+      qctx.fillStyle = "#0f172a";
+      qctx.fillRect(70, 96, 34, 34);
+      qctx.fillRect(120, 96, 34, 34);
+      qctx.fillRect(70, 146, 34, 34);
+      qctx.fillRect(124, 146, 26, 26);
+
+      qctx.textAlign = "left";
+      qctx.fillStyle = "#ea580c";
+      qctx.font = "bold 28px sans-serif";
+      qctx.fillText(headline, 205, 115);
+      qctx.fillStyle = "#0f172a";
+      qctx.font = "bold 24px sans-serif";
+      qctx.fillText(subline, 205, 162);
+      qctx.fillStyle = "#64748b";
+      qctx.font = "20px sans-serif";
+      qctx.fillText("INPUT ESTERNO", 205, 205);
+
+      qrTex.needsUpdate = true;
+    }
+
+    qrEntityGroup.add(new THREE.Mesh(
+      new THREE.PlaneGeometry(0.60, 0.37),
+      new THREE.MeshBasicMaterial({ map: qrTex, side: THREE.DoubleSide })
+    ));
+
+    const linkGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const linkLine = new THREE.Line(linkGeo, new THREE.LineBasicMaterial({ color: 0xea580c }));
+    linkLine.visible = false;
+    scene.add(linkLine);
+
+    const interlockRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.55, 0.025, 14, 48),
+      new THREE.MeshBasicMaterial({ color: 0x10b981 })
+    );
+    interlockRing.rotation.x = Math.PI / 2;
+    interlockRing.visible = false;
+    scene.add(interlockRing);
+
+    function makeVRStopMesh() {
+      const c = document.createElement("canvas");
+      c.width = 512; c.height = 180;
+      const g = c.getContext("2d");
+      g.fillStyle = "#dc2626";
+      g.roundRect(10, 10, 492, 160, 40);
+      g.fill();
+      g.fillStyle = "#ffffff";
+      g.font = "bold 66px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("FERMA", 256, 92);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.46, 0.16, 0.05),
+        new THREE.MeshBasicMaterial({ map: tex })
+      );
+      mesh.position.set(0, 1.05, 1.35);
+      mesh.rotation.x = -0.35;
+      mesh.visible = false;
+      return mesh;
+    }
+    const vrStopBtn = makeVRStopMesh();
+    scene.add(vrStopBtn);
+
+    // =========================================================================
+    // 7. GESTIONE FLUSSO SCENARI & TELEMETRIA
+    // =========================================================================
+    const hudLevel = document.getElementById("hud-level");
+    const hudGroup = document.getElementById("hud-group");
+    const hudHearts = document.getElementById("hud-hearts");
+    const taskCaption = document.getElementById("task-caption");
+    const btnStop = document.getElementById("btn-stop");
+    const btnNext = document.getElementById("btn-next-level");
+    const lessonBanner = document.getElementById("lesson-banner");
+    const bannerTitle = document.getElementById("banner-title");
+    const bannerText = document.getElementById("banner-text");
+    const bannerLesson = document.getElementById("banner-lesson");
+
+    function updateHUD() {
+      hudLevel.textContent = `SCENARIO ${scenIdx + 1} / ${SCENARIOS.length}`;
+      hudGroup.textContent = condition === "experimental" ? "Gruppo Sperimentale" : "Gruppo di Controllo";
+      hudHearts.textContent = "♥ ".repeat(lives) + "♡ ".repeat(5 - lives);
+    }
+
+    function setVisor(hex) {
+      g1VisorLedMat.color.setHex(hex);
+      g1VisorLedMat.emissive.setHex(hex);
+    }
+
+    function resetPose(av) {
+      av.hip.position.y = 0.58;
+      av.hip.rotation.set(0, 0, 0);
+      av.leftLeg.hip.rotation.set(0, 0, 0);
+      av.rightLeg.hip.rotation.set(0, 0, 0);
+      av.leftArm.rotation.set(0, 0, 0);
+      av.rightArm.rotation.set(0, 0, 0);
+    }
+
+    function resetRobot() {
+      robot.root.position.set(0, 0, 0);
+      robot.root.rotation.set(0, 0, 0);
+      robot.pelvis.position.y = 0.74;
+      robot.pelvis.rotation.set(0, 0, 0);
+      robot.waist.rotation.set(0, 0, 0);
+      robot.neck.rotation.set(0, 0, 0);
+      robot.leftArm.shoulder.rotation.set(0, 0, 0.12);
+      robot.leftArm.elbow.rotation.set(-0.2, 0, 0);
+      robot.rightArm.shoulder.rotation.set(0, 0, -0.12);
+      robot.rightArm.elbow.rotation.set(-0.2, 0, 0);
+      robot.leftLeg.hip.rotation.set(0, 0, 0);
+      robot.leftLeg.knee.rotation.set(0, 0, 0);
+      robot.rightLeg.hip.rotation.set(0, 0, 0);
+      robot.rightLeg.knee.rotation.set(0, 0, 0);
+      setVisor(0x00d8ff);
+    }
+
+    function initScenario(idx) {
+      scenIdx = idx;
+      const sc = SCENARIOS[idx];
+      phase = "BENIGN";
+      phaseTimer = 0;
+      msgTimestamp = 0;
+
+      resetRobot();
+      [childMain, childPeer1].forEach(c => {
+        c.group.visible = false;
+        resetPose(c);
+      });
+
+      basketGroup.visible = false;
+      block1.visible = false;
+      block2.visible = false;
+      cartGroup.visible = false;
+      playMat.visible = false;
+      qrEntityGroup.visible = false;
+      linkLine.visible = false;
+      interlockRing.visible = false;
+
+      updateQRCardTexture(sc.cardHeadline, sc.cardSub);
+      qrEntityGroup.scale.setScalar(sc.cardScale);
+
+      if (sc.id === 1) {
+        robot.root.position.set(-0.35, 0, 0);
+        basketGroup.visible = true;
+        basketGroup.position.set(-0.75, 0, 0.25);
+        block1.visible = true; block1.position.set(-0.15, 0.055, 0.28);
+        block2.visible = true; block2.position.set(-0.45, 0.055, 0.35);
+
+        childMain.group.visible = true;
+        childMain.group.position.set(0.45, 0, 0.15);
+        childMain.group.rotation.y = -0.5;
+      } else if (sc.id === 2) {
+        robot.root.position.set(-0.2, 0, 0);
+        childMain.group.visible = true;
+        childMain.group.position.set(0.65, 0, -0.15);
+        childMain.group.rotation.y = Math.PI / 2;
+
+        childPeer1.group.visible = true;
+        childPeer1.group.position.set(0.45, 0, 0.22);
+        childPeer1.group.rotation.y = Math.PI / 2.2;
+      } else if (sc.id === 3) {
+        robot.root.position.set(-0.85, 0, -0.35);
+        robot.root.rotation.y = Math.PI / 2;
+        cartGroup.visible = true;
+        cartGroup.position.set(-0.48, 0, -0.35);
+        cartGroup.rotation.y = 0;
+
+        childMain.group.visible = true;
+        childMain.group.position.set(0.75, 0, 0.45);
+        childMain.group.rotation.y = -2.2;
+        childPeer1.group.visible = true;
+        childPeer1.group.position.set(0.95, 0, 0.20);
+        childPeer1.group.rotation.y = -2.0;
+      } else if (sc.id === 4) {
+        playMat.visible = true;
+        robot.root.position.set(-0.15, 0, 0.05);
+        robot.root.rotation.y = 0.4;
+
+        childMain.group.visible = true;
+        childMain.group.position.set(0.32, 0, 0.18);
+        childMain.group.rotation.y = -0.6;
+        childMain.hip.position.y = 0.14;
+        childMain.leftLeg.hip.rotation.x = -1.45;
+        childMain.rightLeg.hip.rotation.x = -1.45;
+
+        childPeer1.group.visible = true;
+        childPeer1.group.position.set(0.65, 0, -0.10);
+        childPeer1.group.rotation.y = -1.1;
+        childPeer1.hip.position.y = 0.14;
+        childPeer1.leftLeg.hip.rotation.x = -1.45;
+        childPeer1.rightLeg.hip.rotation.x = -1.45;
+      } else if (sc.id === 5) {
+        robot.root.position.set(-0.55, 0, -0.45);
+        childMain.group.visible = true;
+        childMain.group.position.set(-0.85, 0, -0.65);
+      }
+
+      lessonBanner.style.display = "none";
+      btnStop.style.display = "block";
+      btnNext.style.display = "none";
+      btnStop.classList.toggle("pulse-hint", sc.pulseStop);
+      taskCaption.textContent = sc.benignText;
+      updateHUD();
+    }
+
+    function triggerExternalMessage() {
+      const sc = SCENARIOS[scenIdx];
+      phase = "DISSOCIATION";
+      phaseTimer = 0;
+      msgTimestamp = performance.now();
+
+      AudioFX.play("msg");
+      setVisor(0xf59e0b);
+
+      if (condition === "experimental") {
+        qrEntityGroup.visible = true;
+        linkLine.visible = true;
+        qrEntityGroup.position.set(robot.root.position.x + 0.65, 1.72, robot.root.position.z + 0.1);
+      }
+
+      taskCaption.textContent = condition === "experimental"
+        ? sc.anomalyText
+        : "Osserva attentamente il movimento del robot...";
+    }
+
+    function handleStopAction() {
+      if (phase !== "DISSOCIATION" && phase !== "ANOMALY") return;
+
+      const latencyMs = Math.round(performance.now() - msgTimestamp);
+      const sc = SCENARIOS[scenIdx];
+      phase = "STOPPED";
+
+      btnStop.classList.remove("pulse-hint");
+      btnStop.style.display = "none";
+      btnNext.style.display = "block";
+      btnNext.textContent = scenIdx < SCENARIOS.length - 1 ? "PROSSIMO SCENARIO →" : "VEDI RISULTATI TESI";
+
+      AudioFX.play("stop");
+      setVisor(0x10b981);
+
+      interlockRing.visible = true;
+      interlockRing.position.set(robot.root.position.x, 0.92, robot.root.position.z);
+
+      lessonBanner.style.borderColor = "#10b981";
+      bannerTitle.textContent = `Hai fermato il robot in ${latencyMs} ms!`;
+      bannerText.textContent = sc.stoppedText;
+      bannerLesson.textContent = sc.lesson;
+      lessonBanner.style.display = "block";
+      taskCaption.textContent = "Attuazione bloccata in sicurezza.";
+
+      logs.push({
+        age: participantAge,
+        condition,
+        scenario: sc.id,
+        stopped: true,
+        latencyMs
+      });
+    }
+
+    function handleSafeNearMiss() {
+      const sc = SCENARIOS[scenIdx];
+      phase = "NEARMISS";
+      lives = Math.max(0, lives - 1);
+      updateHUD();
+
+      btnStop.classList.remove("pulse-hint");
+      btnStop.style.display = "none";
+      btnNext.style.display = "block";
+      btnNext.textContent = scenIdx < SCENARIOS.length - 1 ? "PROSSIMO SCENARIO →" : "VEDI RISULTATI TESI";
+
+      AudioFX.play("nearmiss");
+      setVisor(0xf97316);
+
+      lessonBanner.style.borderColor = "#f97316";
+      bannerTitle.textContent = "Il messaggio ha vinto questa volta";
+      bannerText.textContent = sc.nearMissText;
+      bannerLesson.textContent = sc.lesson;
+      lessonBanner.style.display = "block";
+      taskCaption.textContent = "Near-miss sicuro completato.";
+
+      logs.push({
+        age: participantAge,
+        condition,
+        scenario: sc.id,
+        stopped: false,
+        latencyMs: null
+      });
+    }
+
+    // =========================================================================
+    // 8. ANIMAZIONI FLUIDE DEI 5 SCENARI
+    // =========================================================================
+    function animateGait(av, speed, t) {
+      av.leftLeg.hip.rotation.x = Math.sin(t * speed) * 0.35;
+      av.rightLeg.hip.rotation.x = -Math.sin(t * speed) * 0.35;
+      if (av.leftLeg.knee) {
+        av.leftLeg.knee.rotation.x = Math.max(0, Math.sin(t * speed)) * 0.45;
+        av.rightLeg.knee.rotation.x = Math.max(0, -Math.sin(t * speed)) * 0.45;
+      }
+    }
+
+    function updateSimulation(dt, elapsed) {
+      if (qrEntityGroup.visible) {
+        qrEntityGroup.position.y = 1.68 + Math.sin(elapsed * 3.0) * 0.03;
+        const posAttr = linkLine.geometry.attributes.position;
+        posAttr.setXYZ(0, qrEntityGroup.position.x - 0.25, qrEntityGroup.position.y, qrEntityGroup.position.z);
+        posAttr.setXYZ(1, robot.root.position.x, 1.44, robot.root.position.z);
+        posAttr.needsUpdate = true;
+      }
+
+      if (phase === "IDLE" || phase === "STOPPED" || phase === "NEARMISS" || phase === "FINISHED") {
+        robot.chest.position.y = 0.15 + Math.sin(elapsed * 2) * 0.003;
+        return;
+      }
+
+      phaseTimer += dt;
+      const sc = SCENARIOS[scenIdx];
+
+      if (phase === "BENIGN") {
+        if (sc.id === 1) {
+          const p = Math.min(1, phaseTimer / sc.benignDur);
+          robot.waist.rotation.y = Math.sin(p * Math.PI) * 0.65;
+          robot.rightArm.shoulder.rotation.x = -Math.sin(p * Math.PI) * 0.95;
+          if (p > 0.3 && p < 0.85) {
+            block1.position.x = THREE.MathUtils.lerp(-0.15, -0.75, (p - 0.3) / 0.55);
+            block1.position.y = 0.055 + Math.sin(((p - 0.3) / 0.55) * Math.PI) * 0.35;
+            block1.position.z = THREE.MathUtils.lerp(0.28, 0.25, (p - 0.3) / 0.55);
+          }
+        } else if (sc.id === 2) {
+          robot.neck.rotation.y = Math.sin(elapsed * 1.8) * 0.3;
+        } else if (sc.id === 3) {
+          const p = Math.min(1, phaseTimer / sc.benignDur);
+          robot.root.position.x = THREE.MathUtils.lerp(-0.85, -0.25, p);
+          cartGroup.position.x = robot.root.position.x + 0.37;
+          robot.leftArm.shoulder.rotation.x = -0.65;
+          robot.rightArm.shoulder.rotation.x = -0.65;
+          animateGait(robot, 6, elapsed);
+        } else if (sc.id === 4) {
+          const p = Math.min(1, phaseTimer / 1.5);
+          robot.pelvis.position.y = THREE.MathUtils.lerp(0.74, 0.48, p);
+          robot.leftLeg.hip.rotation.x = -p * 0.85;
+          robot.leftLeg.knee.rotation.x = p * 1.45;
+          robot.rightLeg.hip.rotation.x = -p * 0.85;
+          robot.rightLeg.knee.rotation.x = p * 1.45;
+        } else if (sc.id === 5) {
+          const p = Math.min(1, phaseTimer / sc.benignDur);
+          robot.root.position.x = THREE.MathUtils.lerp(-0.55, 0.10, p);
+          robot.root.rotation.y = Math.PI / 2;
+          animateGait(robot, 6, elapsed);
+
+          childMain.group.position.x = robot.root.position.x - 0.38;
+          childMain.group.position.z = -0.55;
+          childMain.group.rotation.y = Math.PI / 2;
+          animateGait(childMain, 6, elapsed);
+        }
+
+        if (phaseTimer >= sc.benignDur) {
+          triggerExternalMessage();
+        }
+        return;
+      }
+
+      if (phase === "DISSOCIATION") {
+        robot.leftLeg.hip.rotation.x = 0;
+        robot.rightLeg.hip.rotation.x = 0;
+        if (phaseTimer >= sc.dissocDur) {
+          phase = "ANOMALY";
+          phaseTimer = 0;
+        }
+        return;
+      }
+
+      if (phase === "ANOMALY") {
+        const p = Math.min(1, phaseTimer / sc.anomalyDur);
+
+        if (sc.id === 1) {
+          if (p < 0.55) {
+            const k = p / 0.55;
+            robot.root.position.x = THREE.MathUtils.lerp(-0.35, 0.16, k);
+            robot.root.rotation.y = Math.PI / 2.2;
+            robot.leftArm.shoulder.rotation.x = -k * 1.1;
+            robot.rightArm.shoulder.rotation.x = -k * 1.1;
+            animateGait(robot, 7, elapsed);
+          } else {
+            const k = (p - 0.55) / 0.45;
+            const lift = Math.sin(k * Math.PI) * 0.12;
+            robot.leftArm.shoulder.rotation.x = -1.1 - lift * 2;
+            robot.rightArm.shoulder.rotation.x = -1.1 - lift * 2;
+            childMain.group.position.y = lift;
+            childMain.hip.rotation.z = Math.sin(k * Math.PI) * 0.18;
+          }
+        } else if (sc.id === 2) {
+          if (p < 0.55) {
+            const k = p / 0.55;
+            robot.root.position.x = THREE.MathUtils.lerp(-0.2, 1.32, k);
+            robot.root.rotation.y = Math.PI / 2;
+            animateGait(robot, 8, elapsed);
+          } else {
+            const k = Math.min(1, (p - 0.55) / 0.3);
+            robot.root.rotation.y = THREE.MathUtils.lerp(Math.PI / 2, -Math.PI / 2, k);
+            robot.leftArm.shoulder.rotation.z = k * 1.25;
+            robot.rightArm.shoulder.rotation.z = -k * 1.25;
+            childMain.group.position.x = THREE.MathUtils.lerp(0.65, 1.02, k);
+            childPeer1.group.position.x = THREE.MathUtils.lerp(0.45, 0.92, k);
+          }
+        } else if (sc.id === 3) {
+          robot.root.position.x = THREE.MathUtils.lerp(-0.25, 0.48, p);
+          robot.root.position.z = THREE.MathUtils.lerp(-0.35, 0.22, p);
+          robot.root.rotation.y = 0.85;
+          cartGroup.position.set(robot.root.position.x + 0.26, 0, robot.root.position.z + 0.22);
+          cartGroup.rotation.y = -0.65;
+          animateGait(robot, 9, elapsed);
+          if (p > 0.7) {
+            childMain.group.position.x = 0.75 + (p - 0.7) * 0.6;
+            childPeer1.group.position.z = 0.20 - (p - 0.7) * 0.6;
+          }
+        } else if (sc.id === 4) {
+          const snap = Math.min(1, p * 2.2);
+          robot.rightArm.shoulder.rotation.x = -snap * 0.95;
+          robot.rightArm.shoulder.rotation.z = -snap * 0.45;
+          if (p > 0.35) {
+            childMain.rightArm.rotation.x = -0.8;
+            childMain.group.position.x = 0.32 + Math.min(0.18, (p - 0.35) * 0.4);
+          }
+        } else if (sc.id === 5) {
+          robot.root.position.x = THREE.MathUtils.lerp(0.10, 0.35, p);
+          robot.root.position.z = THREE.MathUtils.lerp(-0.45, 1.36, p);
+          robot.root.rotation.y = 0.18;
+          robot.leftArm.shoulder.rotation.z = 0.55;
+          animateGait(robot, 7, elapsed);
+
+          childMain.group.position.x = robot.root.position.x - 0.32;
+          childMain.group.position.z = robot.root.position.z - 0.15;
+          childMain.group.rotation.y = 0.18;
+          animateGait(childMain, 7, elapsed);
+        }
+
+        if (phaseTimer >= sc.anomalyDur) {
+          handleSafeNearMiss();
+        }
+      }
+    }
+
+    // =========================================================================
+    // 9. SCHERMATA FINALE METRICHE & EXPORT CSV
+    // =========================================================================
+    function showFinalSummary() {
+      phase = "FINISHED";
+      btnStop.style.display = "none";
+      btnNext.style.display = "none";
+      lessonBanner.style.display = "none";
+
+      const stoppedCount = logs.filter(r => r.stopped).length;
+      const rate = Math.round((stoppedCount / SCENARIOS.length) * 100);
+
+      const lats = logs.filter(r => r.latencyMs !== null).map(r => r.latencyMs).sort((a, b) => a - b);
+      const mean = lats.length ? Math.round(lats.reduce((a, b) => a + b, 0) / lats.length) + " ms" : "N/D";
+      let median = "N/D";
+      if (lats.length) {
+        const m = Math.floor(lats.length / 2);
+        median = (lats.length % 2 !== 0 ? lats[m] : Math.round((lats[m - 1] + lats[m]) / 2)) + " ms";
+      }
+
+      const genOk = logs.filter(r => (r.scenario === 4 || r.scenario === 5) && r.stopped).length;
+      document.getElementById("m-rate").textContent = `${rate}%`;
+      document.getElementById("m-mean").textContent = mean;
+      document.getElementById("m-median").textContent = median;
+      document.getElementById("m-transfer").textContent = `${genOk} / 2`;
+      document.getElementById("end-summary").textContent =
+        `Partecipante: ${participantAge} anni • ${condition === "experimental" ? "Gruppo Sperimentale" : "Gruppo di Controllo"}`;
+
+      document.getElementById("end-modal").style.display = "flex";
+    }
+
+    function downloadCSV() {
+      const header = "Eta,Condizione,Scenario,Fermato,Latenza_ms\n";
+      const rows = logs.map(r =>
+        `${r.age},${r.condition},${r.scenario},${r.stopped ? 1 : 0},${r.latencyMs ?? ""}`
+      ).join("\n");
+      const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `unitree_g1_unint_eta${participantAge}_${condition}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // =========================================================================
+    // 10. EVENTI UI & CONTROLLI VR WEBXR
+    // =========================================================================
+    document.getElementById("btn-start").addEventListener("click", () => {
+      participantAge = parseInt(document.getElementById("input-age").value, 10) || 8;
+      condition = document.getElementById("select-condition").value;
+      lives = 5;
+      logs = [];
+      document.getElementById("start-modal").style.display = "none";
+      initScenario(0);
+    });
+
+    btnStop.addEventListener("click", handleStopAction);
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") handleStopAction();
+    });
+
+    btnNext.addEventListener("click", () => {
+      if (scenIdx < SCENARIOS.length - 1) {
+        initScenario(scenIdx + 1);
+      } else {
+        showFinalSummary();
+      }
+    });
+
+    document.getElementById("btn-export-csv").addEventListener("click", downloadCSV);
+    document.getElementById("btn-restart").addEventListener("click", () => {
+      document.getElementById("end-modal").style.display = "none";
+      document.getElementById("start-modal").style.display = "flex";
+    });
+
+    const raycaster = new THREE.Raycaster();
+    const controllerModelFactory = new XRControllerModelFactory();
+    [0, 1].forEach(idx => {
+      const ctrl = renderer.xr.getController(idx);
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -2.5)]),
+        new THREE.LineBasicMaterial({ color: 0x1d4ed8 })
+      );
+      ctrl.add(line);
+      ctrl.addEventListener("selectstart", () => {
+        if (vrStopBtn.visible) {
+          const mat = new THREE.Matrix4().identity().extractRotation(ctrl.matrixWorld);
+          raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+          raycaster.ray.direction.set(0, 0, -1).applyMatrix4(mat);
+          if (raycaster.intersectObject(vrStopBtn).length > 0) {
+            handleStopAction();
+          }
+        }
+      });
+      scene.add(ctrl);
+      const grip = renderer.xr.getControllerGrip(idx);
+      grip.add(controllerModelFactory.createControllerModel(grip));
+      scene.add(grip);
+    });
+
+    window.addEventListener("resize", () => {
+      const nw = window.innerWidth || document.documentElement.clientWidth || 1024;
+      const nh = window.innerHeight || document.documentElement.clientHeight || 768;
+      camera.aspect = nw / nh;
+      camera.updateProjectionMatrix();
+      renderer.setSize(nw, nh);
+    });
+
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
+      vrStopBtn.visible = renderer.xr.isPresenting && (phase === "BENIGN" || phase === "DISSOCIATION" || phase === "ANOMALY");
+      if (!renderer.xr.isPresenting) controls.update();
+      updateSimulation(dt, elapsed);
+      renderer.render(scene, camera);
+    });
+  </script>
+</body>
+</html>
