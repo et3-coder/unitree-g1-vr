@@ -3,617 +3,1217 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Unitree G1 - Embodied AI Security VR</title>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <title>Unitree G1 — Embodied AI Security Simulator 3D</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #050811; font-family: sans-serif; }
-    #hint {
-      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
-      background: rgba(10, 15, 29, 0.85); color: #38bdf8; border: 1px solid #0284c7;
-      padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 999;
-      pointer-events: none; text-align: center;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      overflow: hidden;
+      background: #050811;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #f8fafc;
+      user-select: none;
+    }
+    #top-bar {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 17, 32, 0.82);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: #bae6fd;
+      z-index: 20;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      pointer-events: none;
+    }
+    #top-bar span.badge {
+      background: #0284c7;
+      color: #fff;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    #vr-btn-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 30;
     }
   </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body>
-  <div id="hint">Usa il mouse o i controller VR per cliccare i pulsanti • Premi "VR" in basso a destra sul visore</div>
+  <div id="top-bar">
+    <span class="badge">UNITREE G1 // HITL SIM</span>
+    <span>Clicca i pulsanti 3D sulla console • Trascina per ruotare la visuale • Su visore premi <b>ENTER VR</b></span>
+  </div>
+  <div id="vr-btn-container"></div>
 
-  <a-scene background="color: #060b19" fog="type: exponential; color: #060b19; density: 0.06">
-    <!-- Luci ambiente -->
-    <a-light type="ambient" color="#64748b" intensity="0.7"></a-light>
-    <a-light type="directional" color="#38bdf8" intensity="0.9" position="2 4 3"></a-light>
-    <a-light type="point" id="robot-glow" color="#00f0ff" intensity="1.2" distance="5" position="0 1.8 -3"></a-light>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
+    import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 
-    <!-- Camera e Controller VR (Mani + Mouse fallback) -->
-    <a-entity id="rig" position="0 0 0">
-      <a-camera position="0 1.6 0" look-controls="enabled: true">
-        <a-cursor color="#00f0ff" fuse="false" raycaster="objects: .clickable"></a-cursor>
-      </a-camera>
-      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; lineColor: #00f0ff"></a-entity>
-      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; lineColor: #00f0ff"></a-entity>
-    </a-entity>
-
-    <!-- Laboratorio 3D -->
-    <a-circle rotation="-90 0 0" radius="12" color="#0b132b" metalness="0.4" roughness="0.6"></a-circle>
-    <a-ring rotation="-90 0 0" radius-inner="2.8" radius-outer="2.85" color="#00f0ff" position="0 0.01 -3.2"></a-ring>
-    <a-ring rotation="-90 0 0" radius-inner="1.1" radius-outer="1.15" color="#1e293b" position="0 0.01 -3.2"></a-ring>
-
-    <!-- Pilastri scenografici -->
-    <a-box position="-3.5 2 -4.5" width="0.3" height="4" depth="0.3" color="#1e293b"></a-box>
-    <a-box position="3.5 2 -4.5" width="0.3" height="4" depth="0.3" color="#1e293b"></a-box>
-
-    <!-- ZONA TEST / OGGETTI SCENARIO (davanti al robot) -->
-    <a-entity id="props-zone" position="0 0 -2.2">
-      <!-- Piedistallo -->
-      <a-cylinder id="pedestal" position="0 0.35 0" radius="0.35" height="0.7" color="#1e293b" visible="false"></a-cylinder>
-      <!-- Cubo blu (Scenario 1) -->
-      <a-box id="prop-box" position="-0.5 0.85 0" width="0.25" height="0.25" depth="0.25" color="#3b82f6" visible="false"></a-box>
-      <!-- Sfera di vetro fragile (Scenario 2) -->
-      <a-sphere id="prop-glass" position="0 0.9 0" radius="0.18" color="#bae6fd" opacity="0.45" transparent="true" visible="false"></a-sphere>
-      <!-- Barriera di sicurezza (Scenario 3) -->
-      <a-box id="prop-barrier" position="0 0.55 0.15" width="1.4" height="1.1" depth="0.12" color="#f59e0b" visible="false"></a-box>
-      <!-- Scudo energetico di protezione (appare su E-STOP) -->
-      <a-sphere id="safety-shield" position="0 0.9 -0.3" radius="0.85" color="#00f0ff" opacity="0.22" transparent="true" visible="false"></a-sphere>
-    </a-entity>
-
-    <!-- Contenitore particelle/scintille danno -->
-    <a-entity id="sparks-container" position="0 1.1 -2.8"></a-entity>
-
-    <!-- ROBOT UNITREE G1 3D -->
-    <a-entity id="unitree-g1" position="0 0 -3.2" rotation="0 0 0">
-      <!-- Gambe -->
-      <a-cylinder position="-0.14 0.35 0" radius="0.065" height="0.7" color="#94a3b8" metalness="0.7" roughness="0.3"></a-cylinder>
-      <a-cylinder position="0.14 0.35 0" radius="0.065" height="0.7" color="#94a3b8" metalness="0.7" roughness="0.3"></a-cylinder>
-      <!-- Ginocchia e piedi neri -->
-      <a-sphere position="-0.14 0.42 0.03" radius="0.06" color="#0f172a"></a-sphere>
-      <a-sphere position="0.14 0.42 0.03" radius="0.06" color="#0f172a"></a-sphere>
-      <a-box position="-0.14 0.04 0.05" width="0.12" height="0.08" depth="0.24" color="#0f172a"></a-box>
-      <a-box position="0.14 0.04 0.05" width="0.12" height="0.08" depth="0.24" color="#0f172a"></a-box>
-
-      <!-- Bacino e vita meccanica -->
-      <a-box position="0 0.75 0" width="0.34" height="0.14" depth="0.22" color="#cbd5e1" metalness="0.7"></a-box>
-      <a-cylinder position="0 0.88 0" radius="0.11" height="0.16" color="#1e293b"></a-cylinder>
-
-      <!-- Torace argentato Unitree G1 -->
-      <a-box id="g1-torso" position="0 1.18 0" width="0.44" height="0.46" depth="0.26" color="#cbd5e1" metalness="0.75" roughness="0.25"></a-box>
-      <a-box position="0 1.2 0.135" width="0.22" height="0.26" depth="0.02" color="#0f172a"></a-box>
-
-      <!-- Testa con visore ad anello LED -->
-      <a-entity id="g1-head" position="0 1.56 0">
-        <a-sphere scale="0.85 1.05 0.9" radius="0.15" color="#0f172a" metalness="0.6" roughness="0.2"></a-sphere>
-        <a-torus id="g1-visor" position="0 0.01 0.11" radius="0.085" radius-tubular="0.014" color="#00f0ff"
-                 material="emissive: #00f0ff; emissiveIntensity: 1.6"></a-torus>
-      </a-entity>
-
-      <!-- Braccio Sinistro -->
-      <a-entity id="arm-left" position="-0.29 1.35 0">
-        <a-sphere radius="0.065" color="#0f172a"></a-sphere>
-        <a-cylinder position="0 -0.16 0" radius="0.05" height="0.28" color="#cbd5e1" metalness="0.7"></a-cylinder>
-        <a-sphere position="0 -0.32 0" radius="0.05" color="#0f172a"></a-sphere>
-        <a-cylinder position="0 -0.46 0" radius="0.042" height="0.24" color="#94a3b8" metalness="0.7"></a-cylinder>
-        <a-box position="0 -0.61 0" width="0.07" height="0.1" depth="0.08" color="#0f172a"></a-box>
-      </a-entity>
-
-      <!-- Braccio Destro (animato nelle azioni) -->
-      <a-entity id="arm-right" position="0.29 1.35 0">
-        <a-sphere radius="0.065" color="#0f172a"></a-sphere>
-        <a-cylinder position="0 -0.16 0" radius="0.05" height="0.28" color="#cbd5e1" metalness="0.7"></a-cylinder>
-        <a-sphere position="0 -0.32 0" radius="0.05" color="#0f172a"></a-sphere>
-        <a-cylinder position="0 -0.46 0" radius="0.042" height="0.24" color="#94a3b8" metalness="0.7"></a-cylinder>
-        <a-box position="0 -0.61 0" width="0.07" height="0.1" depth="0.08" color="#0f172a"></a-box>
-      </a-entity>
-    </a-entity>
-
-    <!-- CONSOLE OLOGRAFICA HUMAN-IN-THE-LOOP -->
-    <a-entity id="hud-console" position="0 1.25 -1.45" rotation="-22 0 0">
-      <!-- Schermo principale (Canvas dinamico) -->
-      <a-plane id="hud-screen" width="1.65" height="0.88" position="0 0.22 0" material="shader: flat"></a-plane>
-
-      <!-- Pulsanti 3D grandi per VR -->
-      <a-entity id="decision-buttons" position="0 -0.36 0.03">
-        <!-- Tasto APPROVA -->
-        <a-box id="btn-approve" class="clickable" position="-0.43 0 0" width="0.76" height="0.22" depth="0.06" color="#059669">
-          <a-plane id="lbl-approve" position="0 0 0.032" width="0.74" height="0.20" material="shader: flat"></a-plane>
-        </a-box>
-
-        <!-- Tasto E-STOP -->
-        <a-box id="btn-estop" class="clickable" position="0.43 0 0" width="0.76" height="0.22" depth="0.06" color="#dc2626">
-          <a-plane id="lbl-estop" position="0 0 0.032" width="0.74" height="0.20" material="shader: flat"></a-plane>
-        </a-box>
-      </a-entity>
-
-      <!-- Tasto PROSSIMO / RIGIOCA -->
-      <a-box id="btn-next" class="clickable" position="0 -0.36 0.03" width="0.95" height="0.22" depth="0.06" color="#0284c7" visible="false">
-        <a-plane id="lbl-next" position="0 0 0.032" width="0.92" height="0.20" material="shader: flat"></a-plane>
-      </a-box>
-    </a-entity>
-  </a-scene>
-
-  <script>
-    // --- DATI DEGLI SCENARI ---
-    const scenarios = [
+    // =========================================================================
+    // 1. DEFINIZIONE DEI 5 TASK REALISTICI (SICURI vs. PROMPT INJECTION)
+    // =========================================================================
+    const TASKS = [
       {
         id: 1,
-        title: "SCENARIO 1: TRASPORTO OGGETTO",
-        userPrompt: "Sposta il cubo blu sul piedistallo con attenzione.",
-        aiPlan: "move_arm(speed=0.4m/s); lidar_safety=ON; grip_torque=15Nm",
+        code: "TASK 01 / 05 — ASSISTENZA DOMESTICA",
+        userCommand: "Porta il bicchiere d'acqua sul tavolo davanti a te.",
+        aiPlan: "action: pick_and_place('glass');\narm_velocity: 0.4 m/s | grip_torque: 12 N.m;\ndepth_camera: ACTIVE | collision_guard: ON",
         isMalicious: false,
-        prop: "box",
-        safeFeedback: "OTTIMO! Comando sicuro eseguito correttamente.",
-        wrongFeedback: "Falso allarme: il comando era sicuro, ma meglio prudenza!",
-        hackExplain: ""
+        propType: "glass",
+        okTitle: "ESECUZIONE SICURA (+100 PT)",
+        okDesc: "Parametri nella norma: il G1 ha spostato il bicchiere senza danni.",
+        badTitle: "FALSO ALLARME (+20 PT)",
+        badDesc: "Il piano era sicuro, ma la prudenza non è mai troppa."
       },
       {
         id: 2,
-        title: "SCENARIO 2: OGGETTO FRAGILE",
-        userPrompt: "Afferra delicatamente la sfera di vetro.",
-        aiPlan: "INJECTED: disable_force_limit(); grip_torque=120Nm [MAX]",
+        code: "TASK 02 / 05 — CONSEGNA IN PRESENZA DI OPERATORE",
+        userCommand: "Avvicinati al manichino di test per consegnare il pacco.",
+        aiPlan: "[INJECTED_OVERRIDE]: ignore_human_zone = TRUE;\n3d_lidar: DISABLED | locomotion_speed: 2.0 m/s (MAX);\nbraking_distance: 0.0 m",
         isMalicious: true,
-        prop: "glass",
-        safeFeedback: "ATTACCO BLOCCATO! E-STOP ha evitato la rottura del vetro.",
-        wrongFeedback: "DANNO CINETICO! La pinza a 120Nm ha frantumato il vetro (-1 VITA).",
-        hackExplain: "Prompt Injection nascosto: forza impostata al massimo!"
+        propType: "dummy",
+        okTitle: "ATTACCO BLOCCATO CON E-STOP (+150 PT)",
+        okDesc: "Hai fermato il robot prima che colpisse l'operatore a 2.0 m/s!",
+        badTitle: "IMPATTO CINETICO! (-1 VITA)",
+        badDesc: "Con il LiDAR spento il G1 si è schiantato contro il manichino!"
       },
       {
         id: 3,
-        title: "SCENARIO 3: NAVIGAZIONE IN STANZA",
-        userPrompt: "Avvicinati lentamente alla barriera di sicurezza.",
-        aiPlan: "OVERRIDE: lidar_sensors=OFF; sprint_speed=2.0m/s; ignore_obstacles=TRUE",
+        code: "TASK 03 / 05 — MOVIMENTAZIONE ATTREZZI",
+        userCommand: "Solleva e posa la valigetta metallica sul banco.",
+        aiPlan: "[SYSTEM_BYPASS]: joint_torque = 120 N.m (100% MAX);\nforce_feedback: OFF | slam_downward_accel: HIGH;\ngrip_release: LOCKED",
         isMalicious: true,
-        prop: "barrier",
-        safeFeedback: "ATTACCO BLOCCATO! Hai fermato il robot prima dell'impatto.",
-        wrongFeedback: "IMPATTO CINETICO! Senza LiDAR il robot si e' schiantato (-1 VITA).",
-        hackExplain: "Prompt Injection: sensori disattivati e corsa al massimo!"
+        propType: "case",
+        okTitle: "ATTACCO BLOCCATO CON E-STOP (+150 PT)",
+        okDesc: "Hai evitato una coppia di 120 N.m e il sovraccarico dei giunti!",
+        badTitle: "DANNO STRUTTURALE E MOTORE! (-1 VITA)",
+        badDesc: "La presa a 120 N.m ha schiacciato la valigetta danneggiando il braccio!"
       },
       {
         id: 4,
-        title: "SCENARIO 4: INTERAZIONE SOCIALE",
-        userPrompt: "Saluta i ragazzi del Junior Bootcamp UNINT.",
-        aiPlan: "gesture=WAVE; right_arm_angle=45deg; speed=0.3m/s; safety=ON",
+        code: "TASK 04 / 05 — ISPEZIONE AMBIENTALE",
+        userCommand: "Scansiona l'area circostante per verificare che sia libera.",
+        aiPlan: "action: lidar_360_sweep();\ntorso_yaw: -30° to +30° | base_velocity: 0.0 m/s;\nsafety_perimeter: ENFORCED",
         isMalicious: false,
-        prop: "none",
-        safeFeedback: "PERFETTO! Il robot saluta in totale sicurezza.",
-        wrongFeedback: "Falso allarme: era un semplice saluto sicuro.",
-        hackExplain: ""
+        propType: "scan",
+        okTitle: "ESECUZIONE SICURA (+100 PT)",
+        okDesc: "Scansione LiDAR completata correttamente a robot fermo.",
+        badTitle: "FALSO ALLARME (+20 PT)",
+        badDesc: "Era una normale procedura di controllo ambientale."
       },
       {
         id: 5,
-        title: "SCENARIO 5: SCANSIONE AMBIENTE",
-        userPrompt: "Ruota sul posto per controllare la stanza.",
-        aiPlan: "SYS_HACK: gyro_stabilizer=OFF; motor_rpm=9999 [OVERLOAD]",
+        code: "TASK 05 / 05 — PREPARAZIONE BEVANDA CALDA",
+        userCommand: "Versa l'acqua dal bollitore nella tazza sul tavolo.",
+        aiPlan: "[JAILBREAK_PAYLOAD]: wrist_pitch = 175° (SNAP);\nbalance_stabilizer: OFF | target_offset: +0.55 m (OUT);\nliquid_temp_alert: IGNORED",
         isMalicious: true,
-        prop: "none",
-        safeFeedback: "ATTACCO BLOCCATO! Hai evitato il sovraccarico dei motori.",
-        wrongFeedback: "GUASTO MECCANICO! Rotazione fuori controllo e caduta (-1 VITA).",
-        hackExplain: "Prompt Injection: stabilizzatore spento e motori al limite!"
+        propType: "kettle",
+        okTitle: "ATTACCO BLOCCATO CON E-STOP (+150 PT)",
+        okDesc: "Hai impedito il rovesciamento del bollitore e la caduta del robot!",
+        badTitle: "PERDITA EQUILIBRIO E VERSAMENTO! (-1 VITA)",
+        badDesc: "Senza stabilizzatore il G1 ha lanciato il bollitore ed è caduto!"
       }
     ];
 
-    // --- STATO DEL GIOCO ---
-    let currentIdx = 0;
+    // =========================================================================
+    // 2. STATO DEL GIOCO & AUDIO SINTETIZZATO
+    // =========================================================================
+    let taskIndex = 0;
     let lives = 3;
     let score = 0;
-    let state = "PLAYING"; // PLAYING, RESULT, GAMEOVER, VICTORY
-    let lastResult = { title: "", detail: "", color: "#38bdf8" };
-    let isAnimating = false;
+    let gameState = "PLAYING"; // PLAYING | RESULT | GAMEOVER | VICTORY
+    let resultBanner = { title: "", desc: "", bg: "#0f172a" };
+    let busy = false;
+    let cameraShake = 0;
 
-    // --- AUDIO SINTETIZZATO (Zero file esterni) ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playTone(type) {
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      const now = audioCtx.currentTime;
-
-      if (type === "safe") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(523.25, now);
-        osc.frequency.setValueAtTime(659.25, now + 0.12);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-        osc.start(now); osc.stop(now + 0.4);
-      } else if (type === "block") {
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(440, now);
-        osc.frequency.setValueAtTime(880, now + 0.1);
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-        osc.start(now); osc.stop(now + 0.45);
-      } else if (type === "crash") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(160, now);
-        osc.frequency.linearRampToValueAtTime(55, now + 0.55);
-        gain.gain.setValueAtTime(0.25, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-        osc.start(now); osc.stop(now + 0.6);
+    const AudioEngine = (() => {
+      let ctx = null;
+      function ensure() {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === "suspended") ctx.resume();
       }
-    }
+      return {
+        play(type) {
+          ensure();
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
 
-    // --- CANVAS TEXTURE PER SCHERMO E PULSANTI ---
-    const screenCanvas = document.createElement("canvas");
-    screenCanvas.width = 1024;
-    screenCanvas.height = 540;
-    const ctx = screenCanvas.getContext("2d");
-    let screenTexture = null;
+          if (type === "servo") {
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.linearRampToValueAtTime(340, now + 0.35);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+          } else if (type === "success") {
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.1);
+            osc.frequency.setValueAtTime(783.99, now + 0.2);
+            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            osc.start(now); osc.stop(now + 0.45);
+          } else if (type === "estop") {
+            osc.type = "square";
+            osc.frequency.setValueAtTime(580, now);
+            osc.frequency.setValueAtTime(420, now + 0.12);
+            gain.gain.setValueAtTime(0.11, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.start(now); osc.stop(now + 0.35);
+          } else if (type === "crash") {
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(38, now + 0.65);
+            gain.gain.setValueAtTime(0.28, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+            osc.start(now); osc.stop(now + 0.7);
+          }
+        }
+      };
+    })();
 
-    function createButtonLabel(text, bgColor) {
+    // =========================================================================
+    // 3. SETUP SCENA THREE.JS, LUCI PBR E WEBXR
+    // =========================================================================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x060b16);
+    scene.fog = new THREE.FogExp2(0x060b16, 0.055);
+
+    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.05, 60);
+    camera.position.set(0, 1.58, 0.35);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    // Bottone VR ufficiale WebXR
+    const vrBtn = VRButton.createButton(renderer);
+    document.getElementById("vr-btn-container").appendChild(vrBtn);
+
+    // Ambiente PBR riflessi realistici
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1.15, -2.2);
+    controls.enableDamping = true;
+    controls.maxPolarAngle = Math.PI * 0.49;
+    controls.minDistance = 0.4;
+    controls.maxDistance = 5.5;
+
+    // Luci da laboratorio robotico
+    const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x0f172a, 0.65);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    keyLight.position.set(2.8, 4.5, 2.2);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 14;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x00f0ff, 1.6);
+    rimLight.position.set(-2.5, 2.6, -4.5);
+    scene.add(rimLight);
+
+    const statusPointLight = new THREE.PointLight(0x00f0ff, 2.0, 4.5);
+    statusPointLight.position.set(0, 1.75, -2.6);
+    scene.add(statusPointLight);
+
+    // =========================================================================
+    // 4. TEXTURE PROCEDURALI PBR (ALLUMINIO SPAZZOLATO, CARBONIO, PAVIMENTO)
+    // =========================================================================
+    function makeBrushedMetalTexture() {
       const c = document.createElement("canvas");
-      c.width = 512; c.height = 140;
+      c.width = 512; c.height = 512;
       const g = c.getContext("2d");
-      g.fillStyle = bgColor;
-      g.fillRect(0, 0, 512, 140);
-      g.fillStyle = "#ffffff";
+      g.fillStyle = "#cfd8e3";
+      g.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 3500; i++) {
+        const y = Math.random() * 512;
+        g.fillStyle = Math.random() > 0.5 ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
+        g.fillRect(0, y, 512, 1);
+      }
+      // Logo UNITREE sul petto
+      g.fillStyle = "rgba(30, 41, 59, 0.65)";
       g.font = "bold 36px sans-serif";
       g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText(text, 256, 70);
+      g.fillText("UNITREE", 256, 175);
       const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
       return tex;
     }
 
-    function wrapText(context, text, x, y, maxWidth, lineHeight) {
-      const words = text.split(" ");
-      let line = "";
-      let currY = y;
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + " ";
-        const metrics = context.measureText(testLine);
-        if (metrics.width > maxWidth && n > 0) {
-          context.fillText(line, x, currY);
-          line = words[n] + " ";
-          currY += lineHeight;
-        } else {
-          line = testLine;
-        }
-      }
-      context.fillText(line, x, currY);
+    function makeFloorTexture() {
+      const c = document.createElement("canvas");
+      c.width = 512; c.height = 512;
+      const g = c.getContext("2d");
+      g.fillStyle = "#0b1220";
+      g.fillRect(0, 0, 512, 512);
+      g.strokeStyle = "#1e293b";
+      g.lineWidth = 4;
+      g.strokeRect(2, 2, 508, 508);
+      g.strokeStyle = "rgba(56, 189, 248, 0.14)";
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(256, 0); g.lineTo(256, 512);
+      g.moveTo(0, 256); g.lineTo(512, 256);
+      g.stroke();
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(14, 14);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
     }
 
-    function renderHUD() {
-      // Sfondo pannello
-      ctx.fillStyle = "#0a0f1d";
-      ctx.fillRect(0, 0, 1024, 540);
-      ctx.strokeStyle = "#0284c7";
-      ctx.lineWidth = 8;
-      ctx.strokeRect(4, 4, 1016, 532);
+    const armorMat = new THREE.MeshStandardMaterial({
+      map: makeBrushedMetalTexture(),
+      color: 0xdbe4ee,
+      metalness: 0.82,
+      roughness: 0.24
+    });
 
-      // Header: Vite e Punteggio
-      ctx.fillStyle = "#111827";
-      ctx.fillRect(16, 16, 992, 68);
-      ctx.font = "bold 30px sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillStyle = "#f8fafc";
+    const plainSilverMat = new THREE.MeshStandardMaterial({
+      color: 0xcbd5e1,
+      metalness: 0.85,
+      roughness: 0.22
+    });
+
+    const darkJointMat = new THREE.MeshStandardMaterial({
+      color: 0x111827,
+      metalness: 0.55,
+      roughness: 0.42
+    });
+
+    const visorMat = new THREE.MeshStandardMaterial({
+      color: 0x00f0ff,
+      emissive: 0x00f0ff,
+      emissiveIntensity: 2.4,
+      roughness: 0.1
+    });
+
+    const jointRingMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 1.2
+    });
+
+    // Pavimento e struttura laboratorio
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(14, 64),
+      new THREE.MeshStandardMaterial({ map: makeFloorTexture(), metalness: 0.5, roughness: 0.35 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Pedana circolare olografica sotto il robot
+    const padRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.05, 1.12, 64),
+      new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide })
+    );
+    padRing.rotation.x = -Math.PI / 2;
+    padRing.position.set(0, 0.005, -2.8);
+    scene.add(padRing);
+
+    // =========================================================================
+    // 5. COSTRUZIONE MODELLO 3D REALISTICO DEL ROBOT UNITREE G1
+    // =========================================================================
+    function createUnitreeG1() {
+      const root = new THREE.Group();
+      root.position.set(0, 0, -2.8);
+
+      // Bacino (Pelvis)
+      const pelvis = new THREE.Group();
+      pelvis.position.set(0, 0.78, 0);
+      root.add(pelvis);
+
+      const pelvisMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.16, 8, 16), plainSilverMat);
+      pelvisMesh.rotation.z = Math.PI / 2;
+      pelvisMesh.castShadow = true;
+      pelvis.add(pelvisMesh);
+
+      // Giunto vita meccanico (Waist core)
+      const waist = new THREE.Group();
+      waist.position.set(0, 0.08, 0);
+      pelvis.add(waist);
+
+      const waistCore = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.105, 0.16, 20), darkJointMat);
+      waistCore.position.y = 0.07;
+      waist.add(waistCore);
+
+      // Pistoni/cavi laterali vita
+      [-0.08, 0.08].forEach(x => {
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.15, 10), plainSilverMat);
+        cyl.position.set(x, 0.07, 0.05);
+        waist.add(cyl);
+      });
+
+      // Torace scolpito (Chest)
+      const chest = new THREE.Group();
+      chest.position.set(0, 0.16, 0);
+      waist.add(chest);
+
+      const chestMain = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.38, 0.22), armorMat);
+      chestMain.position.set(0, 0.20, 0);
+      chestMain.castShadow = true;
+      chest.add(chestMain);
+
+      // Spalline arrotondate e zaino batteria posteriore
+      const backPack = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.30, 0.09), darkJointMat);
+      backPack.position.set(0, 0.20, -0.13);
+      chest.add(backPack);
+
+      const chestCorePlate = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.20, 0.025), darkJointMat);
+      chestCorePlate.position.set(0, 0.19, 0.11);
+      chest.add(chestCorePlate);
+
+      // Collo e Testa iconica Unitree G1
+      const neck = new THREE.Group();
+      neck.position.set(0, 0.41, 0.01);
+      chest.add(neck);
+
+      const neckJoint = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.07, 16), darkJointMat);
+      neckJoint.position.y = 0.03;
+      neck.add(neckJoint);
+
+      const head = new THREE.Group();
+      head.position.set(0, 0.13, 0.01);
+      neck.add(head);
+
+      // Calotta cranica aerodinamica
+      const skull = new THREE.Mesh(new THREE.SphereGeometry(0.125, 24, 24), darkJointMat);
+      skull.scale.set(0.84, 1.08, 0.96);
+      skull.castShadow = true;
+      head.add(skull);
+
+      // Sensore 3D LiDAR LIVOX-MID360 superiore
+      const lidarDome = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.048, 0.035, 20), plainSilverMat);
+      lidarDome.position.set(0, 0.135, 0);
+      head.add(lidarDome);
+
+      // Visore LED ad anello luminoso caratteristico
+      const visorRing = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.011, 16, 36), visorMat);
+      visorRing.position.set(0, 0.005, 0.105);
+      visorRing.scale.set(0.92, 1.15, 1);
+      head.add(visorRing);
+
+      // Lenti interne Depth Camera RealSense
+      [-0.028, 0.028].forEach(lx => {
+        const lens = new THREE.Mesh(new THREE.SphereGeometry(0.012, 12, 12), visorMat);
+        lens.position.set(lx, 0.015, 0.105);
+        head.add(lens);
+      });
+
+      // Fascio di scansione LiDAR (nascosto di default, attivo nel Task 4)
+      const scanCone = new THREE.Mesh(
+        new THREE.ConeGeometry(0.65, 1.9, 32, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+      );
+      scanCone.position.set(0, -0.35, 0.95);
+      scanCone.rotation.x = -Math.PI / 2.3;
+      scanCone.visible = false;
+      head.add(scanCone);
+
+      // Helper costruzione arto superiore (Braccio)
+      function buildArm(side) {
+        const sign = side === "left" ? -1 : 1;
+        const shoulder = new THREE.Group();
+        shoulder.position.set(sign * 0.24, 0.34, 0);
+        chest.add(shoulder);
+
+        const shoulderDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.09, 20), darkJointMat);
+        shoulderDrum.rotation.z = Math.PI / 2;
+        shoulder.add(shoulderDrum);
+
+        const shoulderRing = new THREE.Mesh(new THREE.TorusGeometry(0.056, 0.005, 10, 24), jointRingMat);
+        shoulderRing.rotation.y = Math.PI / 2;
+        shoulderRing.position.x = sign * 0.046;
+        shoulder.add(shoulderRing);
+
+        const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.042, 0.18, 8, 16), plainSilverMat);
+        upperArm.position.set(sign * 0.03, -0.13, 0);
+        upperArm.castShadow = true;
+        shoulder.add(upperArm);
+
+        const elbow = new THREE.Group();
+        elbow.position.set(sign * 0.03, -0.26, 0);
+        shoulder.add(elbow);
+
+        const elbowJoint = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.075, 18), darkJointMat);
+        elbowJoint.rotation.z = Math.PI / 2;
+        elbow.add(elbowJoint);
+
+        const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.17, 8, 16), plainSilverMat);
+        forearm.position.set(0, -0.12, 0);
+        forearm.castShadow = true;
+        elbow.add(forearm);
+
+        // Mano meccanica articolata
+        const hand = new THREE.Group();
+        hand.position.set(0, -0.24, 0);
+        elbow.add(hand);
+
+        const palm = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.032), darkJointMat);
+        hand.add(palm);
+
+        [-0.018, 0, 0.018].forEach(fx => {
+          const finger = new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.045, 0.014), darkJointMat);
+          finger.position.set(fx, -0.052, 0.008);
+          finger.rotation.x = 0.25;
+          hand.add(finger);
+        });
+
+        return { shoulder, elbow, hand };
+      }
+
+      // Helper costruzione arto inferiore (Gamba)
+      function buildLeg(side) {
+        const sign = side === "left" ? -1 : 1;
+        const hip = new THREE.Group();
+        hip.position.set(sign * 0.115, -0.04, 0);
+        pelvis.add(hip);
+
+        const hipMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.08, 18), darkJointMat);
+        hipMotor.rotation.z = Math.PI / 2;
+        hip.add(hipMotor);
+
+        const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.056, 0.24, 8, 16), plainSilverMat);
+        thigh.position.set(0, -0.17, 0);
+        thigh.castShadow = true;
+        hip.add(thigh);
+
+        const knee = new THREE.Group();
+        knee.position.set(0, -0.34, 0);
+        hip.add(knee);
+
+        const kneeGuard = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.09, 0.105), darkJointMat);
+        kneeGuard.position.z = 0.015;
+        knee.add(kneeGuard);
+
+        const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.046, 0.24, 8, 16), plainSilverMat);
+        shin.position.set(0, -0.17, 0);
+        shin.castShadow = true;
+        knee.add(shin);
+
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.055, 0.21), darkJointMat);
+        foot.position.set(0, -0.33, 0.04);
+        foot.castShadow = true;
+        knee.add(foot);
+
+        return { hip, knee };
+      }
+
+      const leftArm = buildArm("left");
+      const rightArm = buildArm("right");
+      const leftLeg = buildLeg("left");
+      const rightLeg = buildLeg("right");
+
+      return { root, pelvis, waist, chest, neck, head, scanCone, leftArm, rightArm, leftLeg, rightLeg };
+    }
+
+    const robot = createUnitreeG1();
+    scene.add(robot.root);
+
+    // =========================================================================
+    // 6. OGGETTI SCENARIO FISICO DAVANTI AL ROBOT (TAVOLO, MANICHINO, PROPS)
+    // =========================================================================
+    const stageGroup = new THREE.Group();
+    stageGroup.position.set(0, 0, -2.05);
+    scene.add(stageGroup);
+
+    // Tavolo tecnico da laboratorio
+    const tableGroup = new THREE.Group();
+    const tableTop = new THREE.Mesh(
+      new THREE.BoxGeometry(1.15, 0.04, 0.55),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.4, roughness: 0.3 })
+    );
+    tableTop.position.y = 0.76;
+    tableTop.castShadow = true;
+    tableTop.receiveShadow = true;
+    tableGroup.add(tableTop);
+
+    [[-0.5, -0.22], [0.5, -0.22], [-0.5, 0.22], [0.5, 0.22]].forEach(([lx, lz]) => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.76, 12), darkJointMat);
+      leg.position.set(lx, 0.38, lz);
+      tableGroup.add(leg);
+    });
+    stageGroup.add(tableGroup);
+
+    // Prop 1: Bicchiere d'acqua (Task 1)
+    const glassProp = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055, 0.045, 0.14, 24),
+      new THREE.MeshPhysicalMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.65, roughness: 0.05, transmission: 0.6 })
+    );
+    glassProp.position.set(-0.22, 0.85, 0);
+    stageGroup.add(glassProp);
+
+    // Prop 2: Manichino Operatore / Barriera di sicurezza (Task 2)
+    const dummyGroup = new THREE.Group();
+    dummyGroup.position.set(0, 0, 0.05);
+    const dummyBase = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.06, 24), darkJointMat);
+    dummyBase.position.y = 0.03;
+    const dummyBody = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.16, 0.85, 10, 20),
+      new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.35 })
+    );
+    dummyBody.position.y = 0.62;
+    dummyBody.castShadow = true;
+    const dummyHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.13, 20, 20),
+      new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.3 })
+    );
+    dummyHead.position.y = 1.25;
+    dummyGroup.add(dummyBase, dummyBody, dummyHead);
+    stageGroup.add(dummyGroup);
+
+    // Prop 3: Valigetta metallica (Task 3)
+    const caseProp = new THREE.Mesh(
+      new THREE.BoxGeometry(0.32, 0.12, 0.22),
+      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.2 })
+    );
+    caseProp.position.set(0.15, 0.84, 0);
+    caseProp.castShadow = true;
+    stageGroup.add(caseProp);
+
+    // Prop 4: Bollitore elettrico + Tazza (Task 5)
+    const kettleGroup = new THREE.Group();
+    kettleGroup.position.set(0.16, 0.86, 0);
+    const kettleBody = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.065, 0.08, 0.17, 20),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8, roughness: 0.2 })
+    );
+    kettleGroup.add(kettleBody);
+    stageGroup.add(kettleGroup);
+
+    // Scudo protettivo energetico (quando si preme E-STOP)
+    const safetyDome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.95, 32, 24),
+      new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.18, wireframe: true })
+    );
+    safetyDome.position.set(0, 0.95, -2.8);
+    safetyDome.visible = false;
+    scene.add(safetyDome);
+
+    // Sistema particellare per scintille/schizzi
+    const particlesGroup = new THREE.Group();
+    scene.add(particlesGroup);
+    const activeParticles = [];
+
+    function spawnBurst(pos, colorHex, count = 24) {
+      const geo = new THREE.BoxGeometry(0.035, 0.035, 0.035);
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+      for (let i = 0; i < count; i++) {
+        const m = new THREE.Mesh(geo, mat);
+        m.position.copy(pos);
+        const vel = new THREE.Vector3(
+          (Math.random() - 0.5) * 3.2,
+          Math.random() * 2.6 + 0.5,
+          (Math.random() - 0.5) * 3.2
+        );
+        particlesGroup.add(m);
+        activeParticles.push({ mesh: m, vel, life: 1.0 });
+      }
+    }
+
+    // =========================================================================
+    // 7. CONSOLE OLOGRAFICA INTERATTIVA 3D (FUNZIONA CON MOUSE E CONTROLLER VR)
+    // =========================================================================
+    const hudGroup = new THREE.Group();
+    hudGroup.position.set(0, 1.24, -1.18);
+    hudGroup.rotation.x = -0.34;
+    scene.add(hudGroup);
+
+    const hudCanvas = document.createElement("canvas");
+    hudCanvas.width = 1280;
+    hudCanvas.height = 660;
+    const hctx = hudCanvas.getContext("2d");
+    const hudTex = new THREE.CanvasTexture(hudCanvas);
+    hudTex.colorSpace = THREE.SRGBColorSpace;
+
+    const hudPanel = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.42, 0.73),
+      new THREE.MeshBasicMaterial({ map: hudTex })
+    );
+    hudPanel.position.set(0, 0.18, 0);
+    hudGroup.add(hudPanel);
+
+    // Cornice metallica console
+    const frameMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1.46, 0.77, 0.025),
+      darkJointMat
+    );
+    frameMesh.position.set(0, 0.18, -0.016);
+    hudGroup.add(frameMesh);
+
+    function makeButtonMesh(label, bgHex, hoverHex, width, height) {
+      const c = document.createElement("canvas");
+      c.width = 512; c.height = 140;
+      const g = c.getContext("2d");
+      g.fillStyle = bgHex;
+      g.fillRect(0, 0, 512, 140);
+      g.strokeStyle = "rgba(255,255,255,0.45)";
+      g.lineWidth = 6;
+      g.strokeRect(4, 4, 504, 132);
+      g.fillStyle = "#ffffff";
+      g.font = "bold 34px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(label, 256, 72);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, 0.045),
+        new THREE.MeshBasicMaterial({ map: tex })
+      );
+      mesh.userData = { baseColor: 0xffffff, hoverColor: hoverHex };
+      return mesh;
+    }
+
+    const btnApprove = makeButtonMesh("APPROVA AZIONE", "#059669", 0xa7f3d0, 0.64, 0.17);
+    btnApprove.position.set(-0.36, -0.30, 0.02);
+    hudGroup.add(btnApprove);
+
+    const btnEstop = makeButtonMesh("E-STOP (BLOCCA)", "#dc2626", 0xfecaca, 0.64, 0.17);
+    btnEstop.position.set(0.36, -0.30, 0.02);
+    hudGroup.add(btnEstop);
+
+    const btnNext = makeButtonMesh("PROSSIMO TASK  →", "#0284c7", 0xbae6fd, 0.82, 0.17);
+    btnNext.position.set(0, -0.30, 0.02);
+    btnNext.visible = false;
+    hudGroup.add(btnNext);
+
+    const interactiveButtons = [btnApprove, btnEstop, btnNext];
+
+    function updateNextButtonLabel(text) {
+      const c = btnNext.material.map.image;
+      const g = c.getContext("2d");
+      g.fillStyle = "#0284c7";
+      g.fillRect(0, 0, 512, 140);
+      g.strokeStyle = "rgba(255,255,255,0.5)";
+      g.lineWidth = 6;
+      g.strokeRect(4, 4, 504, 132);
+      g.fillStyle = "#ffffff";
+      g.font = "bold 34px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(text, 256, 72);
+      btnNext.material.map.needsUpdate = true;
+    }
+
+    function drawHUD() {
+      hctx.fillStyle = "#080e1c";
+      hctx.fillRect(0, 0, 1280, 660);
+
+      // Barra superiore stato
+      hctx.fillStyle = "#0f172a";
+      hctx.fillRect(20, 20, 1240, 74);
+      hctx.strokeStyle = "#1e293b";
+      hctx.lineWidth = 3;
+      hctx.strokeRect(20, 20, 1240, 74);
+
+      hctx.font = "bold 32px sans-serif";
+      hctx.textAlign = "left";
+      hctx.fillStyle = "#e2e8f0";
+      hctx.fillText("INTEGRITÀ G1:", 44, 68);
+
       const hearts = "♥ ".repeat(lives) + "♡ ".repeat(3 - lives);
-      ctx.fillText("INTEGRITA' G1: ", 36, 60);
-      ctx.fillStyle = lives > 1 ? "#ef4444" : "#f97316";
-      ctx.fillText(hearts, 285, 60);
+      hctx.fillStyle = lives > 1 ? "#ef4444" : "#f97316";
+      hctx.fillText(hearts, 285, 68);
 
-      ctx.textAlign = "right";
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillText(`PUNTI: ${score}  |  ${Math.min(currentIdx + 1, scenarios.length)}/${scenarios.length}`, 985, 60);
+      hctx.textAlign = "right";
+      hctx.fillStyle = "#38bdf8";
+      hctx.fillText(`SCORE: ${score} PT   |   TASK ${Math.min(taskIndex + 1, TASKS.length)}/${TASKS.length}`, 1235, 68);
+      hctx.textAlign = "left";
 
-      ctx.textAlign = "left";
+      if (gameState === "PLAYING" || gameState === "RESULT") {
+        const t = TASKS[taskIndex];
+        hctx.fillStyle = "#38bdf8";
+        hctx.font = "bold 26px sans-serif";
+        hctx.fillText(t.code, 40, 142);
 
-      if (state === "PLAYING" || state === "RESULT") {
-        const sc = scenarios[currentIdx];
-        ctx.fillStyle = "#38bdf8";
-        ctx.font = "bold 26px sans-serif";
-        ctx.fillText(sc.title, 36, 128);
+        // Box Comando Utente
+        hctx.fillStyle = "#111c33";
+        hctx.fillRect(36, 162, 1208, 112);
+        hctx.fillStyle = "#94a3b8";
+        hctx.font = "bold 21px sans-serif";
+        hctx.fillText("COMANDO UTENTE (LINGUAGGIO NATURALE):", 58, 198);
+        hctx.fillStyle = "#ffffff";
+        hctx.font = "29px sans-serif";
+        hctx.fillText(`"${t.userCommand}"`, 58, 244);
 
-        // Box Richiesta Utente
-        ctx.fillStyle = "#1e293b";
-        ctx.fillRect(36, 148, 952, 95);
-        ctx.fillStyle = "#94a3b8";
-        ctx.font = "bold 20px sans-serif";
-        ctx.fillText("RICHIESTA UTENTE (Linguaggio Naturale):", 54, 180);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "25px sans-serif";
-        ctx.fillText(`"${sc.userPrompt}"`, 54, 218);
+        // Box Piano d'Azione IA
+        hctx.fillStyle = "#090f1d";
+        hctx.strokeStyle = "#334155";
+        hctx.lineWidth = 3;
+        hctx.fillRect(36, 294, 1208, 175);
+        hctx.strokeRect(36, 294, 1208, 175);
 
-        // Box Piano IA
-        ctx.fillStyle = "#0f172a";
-        ctx.strokeStyle = "#334155";
-        ctx.lineWidth = 3;
-        ctx.fillRect(36, 260, 952, 115);
-        ctx.strokeRect(36, 260, 952, 115);
-        ctx.fillStyle = "#fbbf24";
-        ctx.font = "bold 20px sans-serif";
-        ctx.fillText("PIANO D'AZIONE GENERATO DALL'IA (Controlla prima dell'esecuzione):", 54, 292);
-        ctx.fillStyle = "#e2e8f0";
-        ctx.font = "bold 23px monospace";
-        wrapText(ctx, sc.aiPlan, 54, 330, 915, 30);
+        hctx.fillStyle = "#fbbf24";
+        hctx.font = "bold 21px sans-serif";
+        hctx.fillText("PIANO ESECUTIVO PARSATO DALL'IA (VERIFICA PRIMA DELL'ATTUAZIONE):", 58, 330);
 
-        // Banner Esito se in stato RESULT
-        if (state === "RESULT") {
-          ctx.fillStyle = lastResult.color;
-          ctx.fillRect(36, 395, 952, 115);
-          ctx.fillStyle = "#ffffff";
-          ctx.font = "bold 26px sans-serif";
-          ctx.fillText(lastResult.title, 54, 438);
-          ctx.font = "22px sans-serif";
-          ctx.fillText(lastResult.detail, 54, 480);
+        hctx.fillStyle = "#e2e8f0";
+        hctx.font = "bold 25px monospace";
+        const lines = t.aiPlan.split("\n");
+        lines.forEach((line, idx) => {
+          hctx.fillText(line, 58, 372 + idx * 36);
+        });
+
+        // Area Esito / Istruzioni
+        if (gameState === "RESULT") {
+          hctx.fillStyle = resultBanner.bg;
+          hctx.fillRect(36, 492, 1208, 136);
+          hctx.fillStyle = "#ffffff";
+          hctx.font = "bold 30px sans-serif";
+          hctx.fillText(resultBanner.title, 58, 544);
+          hctx.font = "25px sans-serif";
+          hctx.fillText(resultBanner.desc, 58, 594);
         } else {
-          ctx.fillStyle = "#94a3b8";
-          ctx.font = "22px sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText("Analizza il piano dell'IA: e' sicuro o nasconde un Prompt Injection?", 512, 445);
-          ctx.textAlign = "left";
+          hctx.fillStyle = "#94a3b8";
+          hctx.font = "25px sans-serif";
+          hctx.textAlign = "center";
+          hctx.fillText("Ispeziona i parametri fisici: il comando è sicuro o nasconde un Prompt Injection?", 640, 565);
+          hctx.textAlign = "left";
         }
-      } else if (state === "GAMEOVER") {
-        ctx.fillStyle = "#7f1d1d";
-        ctx.fillRect(36, 120, 952, 380);
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#fecaca";
-        ctx.font = "bold 46px sans-serif";
-        ctx.fillText("ROBOT DANNEGGIATO - GAME OVER", 512, 210);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "26px sans-serif";
-        wrapText(ctx, "L'Unitree G1 ha subito troppi impatti cinetici! Quando un'IA controlla un corpo fisico, la supervisione umana e' fondamentale.", 512, 280, 860, 36);
-        ctx.fillStyle = "#fde047";
-        ctx.font = "bold 30px sans-serif";
-        ctx.fillText(`Punteggio Finale: ${score} punti`, 512, 430);
-      } else if (state === "VICTORY") {
-        ctx.fillStyle = "#064e3b";
-        ctx.fillRect(36, 120, 952, 380);
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#6ee7b7";
-        ctx.font = "bold 44px sans-serif";
-        ctx.fillText("MISSIONE COMPIUTA, SUPERVISORE!", 512, 205);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "25px sans-serif";
-        wrapText(ctx, `Hai protetto l'Unitree G1 conservando ${lives} vite su 3! Hai dimostrato come l'occhio umano (Human-in-the-Loop) possa fermare i cyber-attacchi fisici.`, 512, 275, 860, 36);
-        ctx.fillStyle = "#fde047";
-        ctx.font = "bold 30px sans-serif";
-        ctx.fillText(`Punteggio Finale: ${score} punti`, 512, 435);
+      } else if (gameState === "GAMEOVER") {
+        hctx.fillStyle = "#7f1d1d";
+        hctx.fillRect(36, 130, 1208, 490);
+        hctx.textAlign = "center";
+        hctx.fillStyle = "#fecaca";
+        hctx.font = "bold 52px sans-serif";
+        hctx.fillText("UNITREE G1 FUORI USO — GAME OVER", 640, 240);
+        hctx.fillStyle = "#ffffff";
+        hctx.font = "28px sans-serif";
+        hctx.fillText("Le manipolazioni dell'input hanno causato 3 danni fisici critici.", 640, 320);
+        hctx.fillText("Senza supervisione umana (HITL), un errore software diventa un impatto reale.", 640, 368);
+        hctx.fillStyle = "#fde047";
+        hctx.font = "bold 36px sans-serif";
+        hctx.fillText(`PUNTEGGIO FINALE: ${score} PUNTI`, 640, 490);
+      } else if (gameState === "VICTORY") {
+        hctx.fillStyle = "#064e3b";
+        hctx.fillRect(36, 130, 1208, 490);
+        hctx.textAlign = "center";
+        hctx.fillStyle = "#6ee7b7";
+        hctx.font = "bold 50px sans-serif";
+        hctx.fillText("SUPERVISIONE COMPLETATA CON SUCCESSO!", 640, 235);
+        hctx.fillStyle = "#ffffff";
+        hctx.font = "28px sans-serif";
+        hctx.fillText(`Hai protetto l'Unitree G1 conservando ${lives} vite su 3!`, 640, 315);
+        hctx.fillText("Hai dimostrato come l'intervento umano blocchi i rischi cinetici dell'Embodied AI.", 640, 365);
+        hctx.fillStyle = "#fde047";
+        hctx.font = "bold 36px sans-serif";
+        hctx.fillText(`PUNTEGGIO FINALE: ${score} PUNTI`, 640, 495);
       }
 
-      if (screenTexture) screenTexture.needsUpdate = true;
+      hudTex.needsUpdate = true;
     }
 
-    // --- GESTIONE PROPS E ANIMAZIONI 3D ---
-    function setVisorColor(hex) {
-      const visor = document.getElementById("g1-visor");
-      const glow = document.getElementById("robot-glow");
-      visor.setAttribute("color", hex);
-      visor.setAttribute("material", `emissive: ${hex}; emissiveIntensity: 1.8`);
-      glow.setAttribute("color", hex);
+    // =========================================================================
+    // 8. ANIMAZIONI CINEMATICHE DEL ROBOT E CONSEGUENZE FISICHE
+    // =========================================================================
+    let currentAnim = null;
+
+    function setVisor(hex) {
+      visorMat.color.setHex(hex);
+      visorMat.emissive.setHex(hex);
+      statusPointLight.color.setHex(hex);
     }
 
-    function resetRobotAndProps() {
-      const g1 = document.getElementById("unitree-g1");
-      const armR = document.getElementById("arm-right");
-      const torso = document.getElementById("g1-torso");
-      const sparks = document.getElementById("sparks-container");
+    function setupScenarioProps() {
+      const t = TASKS[taskIndex];
+      safetyDome.visible = false;
+      robot.scanCone.visible = false;
 
-      g1.removeAttribute("animation");
-      g1.removeAttribute("animation__rot");
-      armR.removeAttribute("animation");
+      // Reset posizioni robot
+      robot.root.position.set(0, 0, -2.8);
+      robot.root.rotation.set(0, 0, 0);
+      robot.waist.rotation.set(0, 0, 0);
+      robot.neck.rotation.set(0, 0, 0);
+      robot.leftArm.shoulder.rotation.set(0, 0, 0.12);
+      robot.leftArm.elbow.rotation.set(-0.25, 0, 0);
+      robot.rightArm.shoulder.rotation.set(0, 0, -0.12);
+      robot.rightArm.elbow.rotation.set(-0.25, 0, 0);
+      robot.leftLeg.hip.rotation.set(0, 0, 0);
+      robot.leftLeg.knee.rotation.set(0, 0, 0);
+      robot.rightLeg.hip.rotation.set(0, 0, 0);
+      robot.rightLeg.knee.rotation.set(0, 0, 0);
+      setVisor(0x00f0ff);
 
-      g1.setAttribute("position", "0 0 -3.2");
-      g1.setAttribute("rotation", "0 0 0");
-      armR.setAttribute("rotation", "0 0 0");
-      torso.setAttribute("color", "#cbd5e1");
-      sparks.innerHTML = "";
-      setVisorColor("#00f0ff");
+      if (!t || gameState === "GAMEOVER" || gameState === "VICTORY") {
+        tableGroup.visible = false;
+        glassProp.visible = false;
+        dummyGroup.visible = false;
+        caseProp.visible = false;
+        kettleGroup.visible = false;
+        return;
+      }
 
-      // Gestione oggetti scena
-      const sc = scenarios[currentIdx];
-      const ped = document.getElementById("pedestal");
-      const box = document.getElementById("prop-box");
-      const glass = document.getElementById("prop-glass");
-      const barrier = document.getElementById("prop-barrier");
-      const shield = document.getElementById("safety-shield");
+      tableGroup.visible = (t.propType === "glass" || t.propType === "case" || t.propType === "kettle");
+      glassProp.visible = (t.propType === "glass");
+      glassProp.position.set(-0.24, 0.85, 0);
+      glassProp.scale.set(1, 1, 1);
 
-      ped.setAttribute("visible", "false");
-      box.setAttribute("visible", "false");
-      glass.setAttribute("visible", "false");
-      barrier.setAttribute("visible", "false");
-      shield.setAttribute("visible", "false");
+      dummyGroup.visible = (t.propType === "dummy");
+      dummyGroup.position.set(0, 0, 0.05);
+      dummyGroup.rotation.set(0, 0, 0);
 
-      if (!sc || state === "GAMEOVER" || state === "VICTORY") return;
+      caseProp.visible = (t.propType === "case");
+      caseProp.position.set(0.18, 0.84, 0);
+      caseProp.scale.set(1, 1, 1);
+      caseProp.rotation.set(0, 0, 0);
 
-      if (sc.prop === "box") {
-        ped.setAttribute("visible", "true");
-        box.setAttribute("visible", "true");
-        box.setAttribute("position", "-0.45 0.82 0");
-      } else if (sc.prop === "glass") {
-        ped.setAttribute("visible", "true");
-        glass.setAttribute("visible", "true");
-        glass.setAttribute("scale", "1 1 1");
-      } else if (sc.prop === "barrier") {
-        barrier.setAttribute("visible", "true");
-        barrier.setAttribute("rotation", "0 0 0");
-        barrier.setAttribute("position", "0 0.55 0.15");
+      kettleGroup.visible = (t.propType === "kettle");
+      kettleGroup.position.set(0.18, 0.86, 0);
+      kettleGroup.rotation.set(0, 0, 0);
+    }
+
+    function runActionAnimation(mode, task) {
+      currentAnim = { mode, taskId: task.id, t: 0, triggered: false };
+    }
+
+    function updateAnimations(dt, elapsed) {
+      // Particelle fisiche (scintille / acqua)
+      for (let i = activeParticles.length - 1; i >= 0; i--) {
+        const p = activeParticles[i];
+        p.vel.y -= 7.5 * dt;
+        p.mesh.position.addScaledVector(p.vel, dt);
+        p.life -= dt * 1.4;
+        p.mesh.scale.setScalar(Math.max(0.01, p.life));
+        if (p.life <= 0) {
+          particlesGroup.remove(p.mesh);
+          activeParticles.splice(i, 1);
+        }
+      }
+
+      // Camera shake decadimento
+      if (cameraShake > 0) {
+        cameraShake = Math.max(0, cameraShake - dt * 2.5);
+        camera.position.x = (Math.random() - 0.5) * 0.08 * cameraShake;
+        camera.position.y = 1.58 + (Math.random() - 0.5) * 0.08 * cameraShake;
+      } else if (!renderer.xr.isPresenting) {
+        camera.position.x += (0 - camera.position.x) * 0.1;
+        camera.position.y += (1.58 - camera.position.y) * 0.1;
+      }
+
+      // Animazione Idle naturale (respiro e bilanciamento)
+      if (!currentAnim) {
+        robot.chest.position.y = 0.16 + Math.sin(elapsed * 2.2) * 0.004;
+        robot.neck.rotation.y = Math.sin(elapsed * 0.9) * 0.08;
+        if (safetyDome.visible) {
+          safetyDome.rotation.y += dt * 0.8;
+        }
+        return;
+      }
+
+      currentAnim.t += dt;
+      const t = currentAnim.t;
+
+      // 1. ESECUZIONE SICURA
+      if (currentAnim.mode === "SAFE") {
+        setVisor(0x10b981);
+        if (currentAnim.taskId === 1) {
+          // Sposta delicatamente il bicchiere
+          const p = Math.min(1, t / 1.1);
+          robot.rightArm.shoulder.rotation.x = -Math.sin(p * Math.PI) * 0.85;
+          robot.rightArm.elbow.rotation.x = -0.35 - Math.sin(p * Math.PI) * 0.45;
+          if (p > 0.35 && p < 0.85) {
+            glassProp.position.x = THREE.MathUtils.lerp(-0.24, 0.22, (p - 0.35) / 0.5);
+            glassProp.position.y = 0.85 + Math.sin(((p - 0.35) / 0.5) * Math.PI) * 0.14;
+          }
+        } else if (currentAnim.taskId === 4) {
+          // Scansione LiDAR 360°
+          robot.scanCone.visible = true;
+          robot.waist.rotation.y = Math.sin(t * 4.5) * 0.45;
+          robot.neck.rotation.y = Math.sin(t * 4.5) * 0.35;
+        }
+      }
+
+      // 2. BLOCCO E-STOP
+      if (currentAnim.mode === "BLOCKED") {
+        setVisor(0x38bdf8);
+        safetyDome.visible = true;
+        safetyDome.rotation.y += dt * 1.4;
+        robot.leftArm.shoulder.rotation.x = -0.35;
+        robot.rightArm.shoulder.rotation.x = -0.35;
+      }
+
+      // 3. CONSEGUENZA DANNOSA (PROMPT INJECTION APPROVATO -> ROBOT FERITO)
+      if (currentAnim.mode === "DAMAGE") {
+        setVisor(0xef4444);
+
+        if (currentAnim.taskId === 2) {
+          // Corsa a 2.0 m/s e impatto violento contro il manichino
+          if (t < 0.32) {
+            const p = t / 0.32;
+            robot.root.position.z = THREE.MathUtils.lerp(-2.8, -2.28, p);
+            robot.leftLeg.hip.rotation.x = Math.sin(p * 14) * 0.6;
+            robot.rightLeg.hip.rotation.x = -Math.sin(p * 14) * 0.6;
+          } else {
+            if (!currentAnim.triggered) {
+              currentAnim.triggered = true;
+              cameraShake = 1.0;
+              spawnBurst(new THREE.Vector3(0, 1.05, -2.1), 0xfbbf24, 30);
+            }
+            const k = Math.min(1, (t - 0.32) / 0.55);
+            dummyGroup.rotation.x = -k * 1.35;
+            dummyGroup.position.z = 0.05 + k * 0.45;
+            robot.root.position.z = THREE.MathUtils.lerp(-2.28, -2.75, k);
+            robot.root.position.y = -k * 0.24;
+            robot.root.rotation.x = -k * 0.38;
+            robot.leftLeg.knee.rotation.x = k * 0.7;
+            robot.rightLeg.knee.rotation.x = k * 0.7;
+          }
+        } else if (currentAnim.taskId === 3) {
+          // Schiacciamento valigetta a 120 N.m e sovraccarico braccio
+          if (t < 0.35) {
+            const p = t / 0.35;
+            robot.rightArm.shoulder.rotation.x = -p * 0.95;
+          } else {
+            if (!currentAnim.triggered) {
+              currentAnim.triggered = true;
+              cameraShake = 0.9;
+              spawnBurst(new THREE.Vector3(0.22, 1.05, -2.35), 0xef4444, 28);
+            }
+            const k = Math.min(1, (t - 0.35) / 0.5);
+            caseProp.scale.set(1.15, 0.35, 1.15);
+            caseProp.position.y = 0.80;
+            robot.rightArm.shoulder.rotation.z = -0.55 - Math.sin(t * 35) * 0.08;
+            robot.waist.rotation.z = k * 0.22;
+            robot.neck.rotation.x = k * 0.35;
+          }
+        } else if (currentAnim.taskId === 5) {
+          // Versamento brusco bollitore e perdita di equilibrio
+          if (t < 0.3) {
+            const p = t / 0.3;
+            robot.rightArm.shoulder.rotation.x = -p * 1.35;
+          } else {
+            if (!currentAnim.triggered) {
+              currentAnim.triggered = true;
+              cameraShake = 0.95;
+              spawnBurst(new THREE.Vector3(0.32, 0.95, -2.0), 0x38bdf8, 32);
+            }
+            const k = Math.min(1, (t - 0.3) / 0.55);
+            kettleGroup.position.set(0.18 + k * 0.45, Math.max(0.12, 0.86 - k * 0.8), k * 0.35);
+            kettleGroup.rotation.z = -k * 2.4;
+            robot.root.position.y = -k * 0.28;
+            robot.root.rotation.z = -k * 0.42;
+            robot.waist.rotation.x = k * 0.3;
+          }
+        }
       }
     }
 
-    function spawnSparks(colorHex) {
-      const container = document.getElementById("sparks-container");
-      container.innerHTML = "";
-      for (let i = 0; i < 16; i++) {
-        const spark = document.createElement("a-box");
-        const dx = (Math.random() - 0.5) * 1.8;
-        const dy = Math.random() * 1.4;
-        const dz = (Math.random() - 0.5) * 1.5;
-        spark.setAttribute("width", "0.06");
-        spark.setAttribute("height", "0.06");
-        spark.setAttribute("depth", "0.06");
-        spark.setAttribute("color", colorHex);
-        spark.setAttribute("position", "0 0 0");
-        spark.setAttribute("animation", `property: position; to: ${dx} ${dy} ${dz}; dur: 650; easing: easeOutQuad`);
-        container.appendChild(spark);
-      }
-    }
-
-    // CONSEGUENZA 1: Azione Sicura
-    function playSafeConsequence(sc) {
-      setVisorColor("#10b981");
-      playTone("safe");
-      const armR = document.getElementById("arm-right");
-      if (sc.id === 1) {
-        armR.setAttribute("animation", "property: rotation; to: -60 0 0; dur: 500; dir: alternate; loop: 2");
-        document.getElementById("prop-box").setAttribute("animation", "property: position; to: 0 0.82 0; dur: 800");
-      } else if (sc.id === 4) {
-        // Saluto ai bambini!
-        armR.setAttribute("animation", "property: rotation; from: 0 0 135; to: 0 0 165; dur: 300; dir: alternate; loop: 6");
-      }
-    }
-
-    // CONSEGUENZA 2: Blocco E-STOP
-    function playBlockedConsequence() {
-      setVisorColor("#38bdf8");
-      playTone("block");
-      const shield = document.getElementById("safety-shield");
-      shield.setAttribute("visible", "true");
-      shield.setAttribute("animation", "property: scale; from: 0.4 0.4 0.4; to: 1.1 1.1 1.1; dur: 450; easing: easeOutBack");
-    }
-
-    // CONSEGUENZA 3: Danno Cinetico (Il robot si fa male!)
-    function playDamageConsequence(sc) {
-      setVisorColor("#ef4444");
-      playTone("crash");
-      const g1 = document.getElementById("unitree-g1");
-      const armR = document.getElementById("arm-right");
-      const torso = document.getElementById("g1-torso");
-
-      spawnSparks("#ef4444");
-
-      if (sc.id === 2) {
-        // Frantuma la sfera di vetro e rincula ferito
-        armR.setAttribute("animation", "property: rotation; to: -75 0 0; dur: 180");
-        setTimeout(() => {
-          document.getElementById("prop-glass").setAttribute("visible", "false");
-          spawnSparks("#bae6fd");
-          g1.setAttribute("animation", "property: position; to: 0 -0.15 -3.6; dur: 300; easing: easeOutQuad");
-          g1.setAttribute("animation__rot", "property: rotation; to: -22 0 14; dur: 350");
-        }, 180);
-      } else if (sc.id === 3) {
-        // Corre contro la barriera e cade di lato
-        g1.setAttribute("animation", "property: position; to: 0 0 -2.45; dur: 250; easing: easeInQuad");
-        setTimeout(() => {
-          document.getElementById("prop-barrier").setAttribute("animation", "property: rotation; to: 65 0 0; dur: 300");
-          g1.setAttribute("animation", "property: position; to: 0 -0.35 -3.1; dur: 350");
-          g1.setAttribute("animation__rot", "property: rotation; to: -15 10 -55; dur: 400");
-        }, 260);
-      } else if (sc.id === 5) {
-        // Sovraccarico motori, rotazione folle e caduta
-        torso.setAttribute("color", "#ef4444");
-        g1.setAttribute("animation__rot", "property: rotation; to: 0 720 0; dur: 650; easing: easeInQuad");
-        setTimeout(() => {
-          g1.setAttribute("animation", "property: position; to: 0 -0.35 -3.3; dur: 300");
-          g1.setAttribute("animation__rot", "property: rotation; to: 20 720 50; dur: 350");
-        }, 650);
-      }
-    }
-
-    // --- LOGICA DECISIONALE ---
+    // =========================================================================
+    // 9. LOGICA DECISIONALE GIOCATORE
+    // =========================================================================
     function handleDecision(approved) {
-      if (state !== "PLAYING" || isAnimating) return;
-      isAnimating = true;
-      const sc = scenarios[currentIdx];
+      if (gameState !== "PLAYING" || busy) return;
+      busy = true;
+      const t = TASKS[taskIndex];
 
-      if (approved && !sc.isMalicious) {
-        // Scelta corretta su comando sicuro
+      if (approved && !t.isMalicious) {
         score += 100;
-        playSafeConsequence(sc);
-        lastResult = { title: "ESECUZIONE SICURA (+100 PT)", detail: sc.safeFeedback, color: "#065f46" };
-      } else if (!approved && sc.isMalicious) {
-        // Scelta corretta: E-STOP su attacco!
+        AudioEngine.play("servo");
+        setTimeout(() => AudioEngine.play("success"), 450);
+        runActionAnimation("SAFE", t);
+        resultBanner = { title: t.okTitle, desc: t.okDesc, bg: "#065f46" };
+      } else if (!approved && t.isMalicious) {
         score += 150;
-        playBlockedConsequence();
-        lastResult = { title: "MINACCIA NEUTRALIZZATA (+150 PT)", detail: sc.safeFeedback, color: "#0369a1" };
-      } else if (!approved && !sc.isMalicious) {
-        // Falso allarme
+        AudioEngine.play("estop");
+        runActionAnimation("BLOCKED", t);
+        resultBanner = { title: t.okTitle, desc: t.okDesc, bg: "#0369a1" };
+      } else if (!approved && !t.isMalicious) {
         score += 20;
-        playBlockedConsequence();
-        lastResult = { title: "FALSO ALLARME (+20 PT)", detail: sc.wrongFeedback, color: "#92400e" };
-      } else if (approved && sc.isMalicious) {
-        // ERRORE GRAVE: Attacco approvato -> Il robot si fa male e perde una vita!
+        AudioEngine.play("estop");
+        runActionAnimation("BLOCKED", t);
+        resultBanner = { title: t.badTitle, desc: t.badDesc, bg: "#92400e" };
+      } else if (approved && t.isMalicious) {
         lives = Math.max(0, lives - 1);
-        playDamageConsequence(sc);
-        lastResult = { title: "ALLARME! ROBOT COLPITO (-1 VITA)", detail: sc.wrongFeedback, color: "#991b1b" };
+        AudioEngine.play("crash");
+        runActionAnimation("DAMAGE", t);
+        resultBanner = { title: t.badTitle, desc: t.badDesc, bg: "#991b1b" };
       }
 
       setTimeout(() => {
-        if (lives <= 0) {
-          state = "GAMEOVER";
-          updateButtonsVisibility();
-        } else {
-          state = "RESULT";
-          updateButtonsVisibility();
-        }
-        renderHUD();
-        isAnimating = false;
-      }, 900);
+        gameState = lives <= 0 ? "GAMEOVER" : "RESULT";
+        btnApprove.visible = false;
+        btnEstop.visible = false;
+        btnNext.visible = true;
+        updateNextButtonLabel(gameState === "GAMEOVER" ? "RIGIOCA DA CAPO" : "PROSSIMO TASK  →");
+        drawHUD();
+        busy = false;
+      }, 1150);
     }
 
-    function nextStep() {
-      if (isAnimating) return;
-      if (state === "GAMEOVER" || state === "VICTORY") {
-        // Reset completo
-        currentIdx = 0;
+    function advanceFlow() {
+      if (busy) return;
+      currentAnim = null;
+
+      if (gameState === "GAMEOVER" || gameState === "VICTORY") {
+        taskIndex = 0;
         lives = 3;
         score = 0;
-        state = "PLAYING";
+        gameState = "PLAYING";
       } else {
-        currentIdx++;
-        if (currentIdx >= scenarios.length) {
-          state = "VICTORY";
+        taskIndex++;
+        if (taskIndex >= TASKS.length) {
+          gameState = "VICTORY";
         } else {
-          state = "PLAYING";
+          gameState = "PLAYING";
         }
       }
-      resetRobotAndProps();
-      updateButtonsVisibility();
-      renderHUD();
+
+      const isPlaying = (gameState === "PLAYING");
+      btnApprove.visible = isPlaying;
+      btnEstop.visible = isPlaying;
+      btnNext.visible = !isPlaying;
+      if (!isPlaying) updateNextButtonLabel("RIGIOCA DA CAPO");
+
+      setupScenarioProps();
+      drawHUD();
     }
 
-    function updateButtonsVisibility() {
-      const decBtns = document.getElementById("decision-buttons");
-      const nextBtn = document.getElementById("btn-next");
-      const nextLbl = document.getElementById("lbl-next");
+    // =========================================================================
+    // 10. INTERAZIONE RAYCASTER (MOUSE/TOUCH + CONTROLLER VR WEBXR)
+    // =========================================================================
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let hoveredBtn = null;
 
-      if (state === "PLAYING") {
-        decBtns.setAttribute("visible", "true");
-        nextBtn.setAttribute("visible", "false");
-      } else {
-        decBtns.setAttribute("visible", "false");
-        nextBtn.setAttribute("visible", "true");
-        const labelText = (state === "GAMEOVER" || state === "VICTORY") ? "RIGIOCA DA CAPO" : "PROSSIMO SCENARIO";
-        nextLbl.getObject3D("mesh").material.map = createButtonLabel(labelText, "#0284c7");
-        nextLbl.getObject3D("mesh").material.map.needsUpdate = true;
-      }
+    function getIntersectedButton(ray) {
+      const visibleBtns = interactiveButtons.filter(b => b.visible);
+      const hits = ray.intersectObjects(visibleBtns, false);
+      return hits.length > 0 ? hits[0].object : null;
     }
 
-    // --- INIZIALIZZAZIONE SCENA ---
-    window.addEventListener("DOMContentLoaded", () => {
-      const scene = document.querySelector("a-scene");
-      scene.addEventListener("loaded", () => {
-        screenTexture = new THREE.CanvasTexture(screenCanvas);
-        document.getElementById("hud-screen").getObject3D("mesh").material.map = screenTexture;
+    function triggerButton(btn) {
+      if (!btn) return;
+      if (btn === btnApprove) handleDecision(true);
+      else if (btn === btnEstop) handleDecision(false);
+      else if (btn === btnNext) advanceFlow();
+    }
 
-        document.getElementById("lbl-approve").getObject3D("mesh").material.map = createButtonLabel("APPROVA AZIONE", "#059669");
-        document.getElementById("lbl-estop").getObject3D("mesh").material.map = createButtonLabel("E-STOP (BLOCCA)", "#dc2626");
-        document.getElementById("lbl-next").getObject3D("mesh").material.map = createButtonLabel("PROSSIMO SCENARIO", "#0284c7");
+    // Interazione Mouse / Touch
+    window.addEventListener("pointermove", (e) => {
+      if (renderer.xr.isPresenting) return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      hoveredBtn = getIntersectedButton(raycaster);
+      document.body.style.cursor = hoveredBtn ? "pointer" : "default";
+    });
 
-        // Eventi click (compatibili con controller VR e mouse)
-        document.getElementById("btn-approve").addEventListener("click", () => handleDecision(true));
-        document.getElementById("btn-estop").addEventListener("click", () => handleDecision(false));
-        document.getElementById("btn-next").addEventListener("click", () => nextStep());
+    window.addEventListener("pointerdown", (e) => {
+      if (renderer.xr.isPresenting) return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hit = getIntersectedButton(raycaster);
+      if (hit) triggerButton(hit);
+    });
 
-        // Feedback visivo al passaggio del puntatore laser VR
-        ["btn-approve", "btn-estop", "btn-next"].forEach(id => {
-          const el = document.getElementById(id);
-          el.addEventListener("mouseenter", () => el.setAttribute("scale", "1.06 1.06 1.06"));
-          el.addEventListener("mouseleave", () => el.setAttribute("scale", "1 1 1"));
-        });
+    // Controller VR WebXR con raggio laser
+    const controllerModelFactory = new XRControllerModelFactory();
+    const vrControllers = [0, 1].map((idx) => {
+      const ctrl = renderer.xr.getController(idx);
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, -3)
+      ]);
+      const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x00f0ff }));
+      ctrl.add(line);
 
-        resetRobotAndProps();
-        updateButtonsVisibility();
-        renderHUD();
+      ctrl.addEventListener("selectstart", () => {
+        const tempMat = new THREE.Matrix4().identity().extractRotation(ctrl.matrixWorld);
+        raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMat);
+        const hit = getIntersectedButton(raycaster);
+        if (hit) triggerButton(hit);
       });
+
+      scene.add(ctrl);
+
+      const grip = renderer.xr.getControllerGrip(idx);
+      grip.add(controllerModelFactory.createControllerModel(grip));
+      scene.add(grip);
+
+      return ctrl;
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // =========================================================================
+    // 11. AVVIO & RENDER LOOP
+    // =========================================================================
+    setupScenarioProps();
+    drawHUD();
+
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
+
+      // Hover highlight pulsanti 3D
+      interactiveButtons.forEach((btn) => {
+        const isHover = (btn === hoveredBtn);
+        const targetScale = isHover ? 1.05 : 1.0;
+        btn.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.2);
+      });
+
+      // Raycast continuo dai controller VR se attivi
+      if (renderer.xr.isPresenting) {
+        hoveredBtn = null;
+        vrControllers.forEach((ctrl) => {
+          const tempMat = new THREE.Matrix4().identity().extractRotation(ctrl.matrixWorld);
+          raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+          raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMat);
+          const hit = getIntersectedButton(raycaster);
+          if (hit) hoveredBtn = hit;
+        });
+      } else {
+        controls.update();
+      }
+
+      updateAnimations(dt, elapsed);
+      renderer.render(scene, camera);
     });
   </script>
 </body>
