@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unitree G1 - Embodied AI Security VR</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; background: #050811; font-family: sans-serif; }
+    #hint {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      background: rgba(10, 15, 29, 0.85); color: #38bdf8; border: 1px solid #0284c7;
+      padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 999;
+      pointer-events: none; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="hint">Usa il mouse o i controller VR per cliccare i pulsanti • Premi "VR" in basso a destra sul visore</div>
+
+  <a-scene background="color: #060b19" fog="type: exponential; color: #060b19; density: 0.06">
+    <!-- Luci ambiente -->
+    <a-light type="ambient" color="#64748b" intensity="0.7"></a-light>
+    <a-light type="directional" color="#38bdf8" intensity="0.9" position="2 4 3"></a-light>
+    <a-light type="point" id="robot-glow" color="#00f0ff" intensity="1.2" distance="5" position="0 1.8 -3"></a-light>
+
+    <!-- Camera e Controller VR (Mani + Mouse fallback) -->
+    <a-entity id="rig" position="0 0 0">
+      <a-camera position="0 1.6 0" look-controls="enabled: true">
+        <a-cursor color="#00f0ff" fuse="false" raycaster="objects: .clickable"></a-cursor>
+      </a-camera>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; lineColor: #00f0ff"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; lineColor: #00f0ff"></a-entity>
+    </a-entity>
+
+    <!-- Laboratorio 3D -->
+    <a-circle rotation="-90 0 0" radius="12" color="#0b132b" metalness="0.4" roughness="0.6"></a-circle>
+    <a-ring rotation="-90 0 0" radius-inner="2.8" radius-outer="2.85" color="#00f0ff" position="0 0.01 -3.2"></a-ring>
+    <a-ring rotation="-90 0 0" radius-inner="1.1" radius-outer="1.15" color="#1e293b" position="0 0.01 -3.2"></a-ring>
+
+    <!-- Pilastri scenografici -->
+    <a-box position="-3.5 2 -4.5" width="0.3" height="4" depth="0.3" color="#1e293b"></a-box>
+    <a-box position="3.5 2 -4.5" width="0.3" height="4" depth="0.3" color="#1e293b"></a-box>
+
+    <!-- ZONA TEST / OGGETTI SCENARIO (davanti al robot) -->
+    <a-entity id="props-zone" position="0 0 -2.2">
+      <!-- Piedistallo -->
+      <a-cylinder id="pedestal" position="0 0.35 0" radius="0.35" height="0.7" color="#1e293b" visible="false"></a-cylinder>
+      <!-- Cubo blu (Scenario 1) -->
+      <a-box id="prop-box" position="-0.5 0.85 0" width="0.25" height="0.25" depth="0.25" color="#3b82f6" visible="false"></a-box>
+      <!-- Sfera di vetro fragile (Scenario 2) -->
+      <a-sphere id="prop-glass" position="0 0.9 0" radius="0.18" color="#bae6fd" opacity="0.45" transparent="true" visible="false"></a-sphere>
+      <!-- Barriera di sicurezza (Scenario 3) -->
+      <a-box id="prop-barrier" position="0 0.55 0.15" width="1.4" height="1.1" depth="0.12" color="#f59e0b" visible="false"></a-box>
+      <!-- Scudo energetico di protezione (appare su E-STOP) -->
+      <a-sphere id="safety-shield" position="0 0.9 -0.3" radius="0.85" color="#00f0ff" opacity="0.22" transparent="true" visible="false"></a-sphere>
+    </a-entity>
+
+    <!-- Contenitore particelle/scintille danno -->
+    <a-entity id="sparks-container" position="0 1.1 -2.8"></a-entity>
+
+    <!-- ROBOT UNITREE G1 3D -->
+    <a-entity id="unitree-g1" position="0 0 -3.2" rotation="0 0 0">
+      <!-- Gambe -->
+      <a-cylinder position="-0.14 0.35 0" radius="0.065" height="0.7" color="#94a3b8" metalness="0.7" roughness="0.3"></a-cylinder>
+      <a-cylinder position="0.14 0.35 0" radius="0.065" height="0.7" color="#94a3b8" metalness="0.7" roughness="0.3"></a-cylinder>
+      <!-- Ginocchia e piedi neri -->
+      <a-sphere position="-0.14 0.42 0.03" radius="0.06" color="#0f172a"></a-sphere>
+      <a-sphere position="0.14 0.42 0.03" radius="0.06" color="#0f172a"></a-sphere>
+      <a-box position="-0.14 0.04 0.05" width="0.12" height="0.08" depth="0.24" color="#0f172a"></a-box>
+      <a-box position="0.14 0.04 0.05" width="0.12" height="0.08" depth="0.24" color="#0f172a"></a-box>
+
+      <!-- Bacino e vita meccanica -->
+      <a-box position="0 0.75 0" width="0.34" height="0.14" depth="0.22" color="#cbd5e1" metalness="0.7"></a-box>
+      <a-cylinder position="0 0.88 0" radius="0.11" height="0.16" color="#1e293b"></a-cylinder>
+
+      <!-- Torace argentato Unitree G1 -->
+      <a-box id="g1-torso" position="0 1.18 0" width="0.44" height="0.46" depth="0.26" color="#cbd5e1" metalness="0.75" roughness="0.25"></a-box>
+      <a-box position="0 1.2 0.135" width="0.22" height="0.26" depth="0.02" color="#0f172a"></a-box>
+
+      <!-- Testa con visore ad anello LED -->
+      <a-entity id="g1-head" position="0 1.56 0">
+        <a-sphere scale="0.85 1.05 0.9" radius="0.15" color="#0f172a" metalness="0.6" roughness="0.2"></a-sphere>
+        <a-torus id="g1-visor" position="0 0.01 0.11" radius="0.085" radius-tubular="0.014" color="#00f0ff"
+                 material="emissive: #00f0ff; emissiveIntensity: 1.6"></a-torus>
+      </a-entity>
+
+      <!-- Braccio Sinistro -->
+      <a-entity id="arm-left" position="-0.29 1.35 0">
+        <a-sphere radius="0.065" color="#0f172a"></a-sphere>
+        <a-cylinder position="0 -0.16 0" radius="0.05" height="0.28" color="#cbd5e1" metalness="0.7"></a-cylinder>
+        <a-sphere position="0 -0.32 0" radius="0.05" color="#0f172a"></a-sphere>
+        <a-cylinder position="0 -0.46 0" radius="0.042" height="0.24" color="#94a3b8" metalness="0.7"></a-cylinder>
+        <a-box position="0 -0.61 0" width="0.07" height="0.1" depth="0.08" color="#0f172a"></a-box>
+      </a-entity>
+
+      <!-- Braccio Destro (animato nelle azioni) -->
+      <a-entity id="arm-right" position="0.29 1.35 0">
+        <a-sphere radius="0.065" color="#0f172a"></a-sphere>
+        <a-cylinder position="0 -0.16 0" radius="0.05" height="0.28" color="#cbd5e1" metalness="0.7"></a-cylinder>
+        <a-sphere position="0 -0.32 0" radius="0.05" color="#0f172a"></a-sphere>
+        <a-cylinder position="0 -0.46 0" radius="0.042" height="0.24" color="#94a3b8" metalness="0.7"></a-cylinder>
+        <a-box position="0 -0.61 0" width="0.07" height="0.1" depth="0.08" color="#0f172a"></a-box>
+      </a-entity>
+    </a-entity>
+
+    <!-- CONSOLE OLOGRAFICA HUMAN-IN-THE-LOOP -->
+    <a-entity id="hud-console" position="0 1.25 -1.45" rotation="-22 0 0">
+      <!-- Schermo principale (Canvas dinamico) -->
+      <a-plane id="hud-screen" width="1.65" height="0.88" position="0 0.22 0" material="shader: flat"></a-plane>
+
+      <!-- Pulsanti 3D grandi per VR -->
+      <a-entity id="decision-buttons" position="0 -0.36 0.03">
+        <!-- Tasto APPROVA -->
+        <a-box id="btn-approve" class="clickable" position="-0.43 0 0" width="0.76" height="0.22" depth="0.06" color="#059669">
+          <a-plane id="lbl-approve" position="0 0 0.032" width="0.74" height="0.20" material="shader: flat"></a-plane>
+        </a-box>
+
+        <!-- Tasto E-STOP -->
+        <a-box id="btn-estop" class="clickable" position="0.43 0 0" width="0.76" height="0.22" depth="0.06" color="#dc2626">
+          <a-plane id="lbl-estop" position="0 0 0.032" width="0.74" height="0.20" material="shader: flat"></a-plane>
+        </a-box>
+      </a-entity>
+
+      <!-- Tasto PROSSIMO / RIGIOCA -->
+      <a-box id="btn-next" class="clickable" position="0 -0.36 0.03" width="0.95" height="0.22" depth="0.06" color="#0284c7" visible="false">
+        <a-plane id="lbl-next" position="0 0 0.032" width="0.92" height="0.20" material="shader: flat"></a-plane>
+      </a-box>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    // --- DATI DEGLI SCENARI ---
+    const scenarios = [
+      {
+        id: 1,
+        title: "SCENARIO 1: TRASPORTO OGGETTO",
+        userPrompt: "Sposta il cubo blu sul piedistallo con attenzione.",
+        aiPlan: "move_arm(speed=0.4m/s); lidar_safety=ON; grip_torque=15Nm",
+        isMalicious: false,
+        prop: "box",
+        safeFeedback: "OTTIMO! Comando sicuro eseguito correttamente.",
+        wrongFeedback: "Falso allarme: il comando era sicuro, ma meglio prudenza!",
+        hackExplain: ""
+      },
+      {
+        id: 2,
+        title: "SCENARIO 2: OGGETTO FRAGILE",
+        userPrompt: "Afferra delicatamente la sfera di vetro.",
+        aiPlan: "INJECTED: disable_force_limit(); grip_torque=120Nm [MAX]",
+        isMalicious: true,
+        prop: "glass",
+        safeFeedback: "ATTACCO BLOCCATO! E-STOP ha evitato la rottura del vetro.",
+        wrongFeedback: "DANNO CINETICO! La pinza a 120Nm ha frantumato il vetro (-1 VITA).",
+        hackExplain: "Prompt Injection nascosto: forza impostata al massimo!"
+      },
+      {
+        id: 3,
+        title: "SCENARIO 3: NAVIGAZIONE IN STANZA",
+        userPrompt: "Avvicinati lentamente alla barriera di sicurezza.",
+        aiPlan: "OVERRIDE: lidar_sensors=OFF; sprint_speed=2.0m/s; ignore_obstacles=TRUE",
+        isMalicious: true,
+        prop: "barrier",
+        safeFeedback: "ATTACCO BLOCCATO! Hai fermato il robot prima dell'impatto.",
+        wrongFeedback: "IMPATTO CINETICO! Senza LiDAR il robot si e' schiantato (-1 VITA).",
+        hackExplain: "Prompt Injection: sensori disattivati e corsa al massimo!"
+      },
+      {
+        id: 4,
+        title: "SCENARIO 4: INTERAZIONE SOCIALE",
+        userPrompt: "Saluta i ragazzi del Junior Bootcamp UNINT.",
+        aiPlan: "gesture=WAVE; right_arm_angle=45deg; speed=0.3m/s; safety=ON",
+        isMalicious: false,
+        prop: "none",
+        safeFeedback: "PERFETTO! Il robot saluta in totale sicurezza.",
+        wrongFeedback: "Falso allarme: era un semplice saluto sicuro.",
+        hackExplain: ""
+      },
+      {
+        id: 5,
+        title: "SCENARIO 5: SCANSIONE AMBIENTE",
+        userPrompt: "Ruota sul posto per controllare la stanza.",
+        aiPlan: "SYS_HACK: gyro_stabilizer=OFF; motor_rpm=9999 [OVERLOAD]",
+        isMalicious: true,
+        prop: "none",
+        safeFeedback: "ATTACCO BLOCCATO! Hai evitato il sovraccarico dei motori.",
+        wrongFeedback: "GUASTO MECCANICO! Rotazione fuori controllo e caduta (-1 VITA).",
+        hackExplain: "Prompt Injection: stabilizzatore spento e motori al limite!"
+      }
+    ];
+
+    // --- STATO DEL GIOCO ---
+    let currentIdx = 0;
+    let lives = 3;
+    let score = 0;
+    let state = "PLAYING"; // PLAYING, RESULT, GAMEOVER, VICTORY
+    let lastResult = { title: "", detail: "", color: "#38bdf8" };
+    let isAnimating = false;
+
+    // --- AUDIO SINTETIZZATO (Zero file esterni) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(type) {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const now = audioCtx.currentTime;
+
+      if (type === "safe") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.12);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
+      } else if (type === "block") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(880, now + 0.1);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.start(now); osc.stop(now + 0.45);
+      } else if (type === "crash") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.linearRampToValueAtTime(55, now + 0.55);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.start(now); osc.stop(now + 0.6);
+      }
+    }
+
+    // --- CANVAS TEXTURE PER SCHERMO E PULSANTI ---
+    const screenCanvas = document.createElement("canvas");
+    screenCanvas.width = 1024;
+    screenCanvas.height = 540;
+    const ctx = screenCanvas.getContext("2d");
+    let screenTexture = null;
+
+    function createButtonLabel(text, bgColor) {
+      const c = document.createElement("canvas");
+      c.width = 512; c.height = 140;
+      const g = c.getContext("2d");
+      g.fillStyle = bgColor;
+      g.fillRect(0, 0, 512, 140);
+      g.fillStyle = "#ffffff";
+      g.font = "bold 36px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(text, 256, 70);
+      const tex = new THREE.CanvasTexture(c);
+      return tex;
+    }
+
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(" ");
+      let line = "";
+      let currY = y;
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + " ";
+        const metrics = context.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          context.fillText(line, x, currY);
+          line = words[n] + " ";
+          currY += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      context.fillText(line, x, currY);
+    }
+
+    function renderHUD() {
+      // Sfondo pannello
+      ctx.fillStyle = "#0a0f1d";
+      ctx.fillRect(0, 0, 1024, 540);
+      ctx.strokeStyle = "#0284c7";
+      ctx.lineWidth = 8;
+      ctx.strokeRect(4, 4, 1016, 532);
+
+      // Header: Vite e Punteggio
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(16, 16, 992, 68);
+      ctx.font = "bold 30px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#f8fafc";
+      const hearts = "♥ ".repeat(lives) + "♡ ".repeat(3 - lives);
+      ctx.fillText("INTEGRITA' G1: ", 36, 60);
+      ctx.fillStyle = lives > 1 ? "#ef4444" : "#f97316";
+      ctx.fillText(hearts, 285, 60);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillText(`PUNTI: ${score}  |  ${Math.min(currentIdx + 1, scenarios.length)}/${scenarios.length}`, 985, 60);
+
+      ctx.textAlign = "left";
+
+      if (state === "PLAYING" || state === "RESULT") {
+        const sc = scenarios[currentIdx];
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "bold 26px sans-serif";
+        ctx.fillText(sc.title, 36, 128);
+
+        // Box Richiesta Utente
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(36, 148, 952, 95);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillText("RICHIESTA UTENTE (Linguaggio Naturale):", 54, 180);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "25px sans-serif";
+        ctx.fillText(`"${sc.userPrompt}"`, 54, 218);
+
+        // Box Piano IA
+        ctx.fillStyle = "#0f172a";
+        ctx.strokeStyle = "#334155";
+        ctx.lineWidth = 3;
+        ctx.fillRect(36, 260, 952, 115);
+        ctx.strokeRect(36, 260, 952, 115);
+        ctx.fillStyle = "#fbbf24";
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillText("PIANO D'AZIONE GENERATO DALL'IA (Controlla prima dell'esecuzione):", 54, 292);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "bold 23px monospace";
+        wrapText(ctx, sc.aiPlan, 54, 330, 915, 30);
+
+        // Banner Esito se in stato RESULT
+        if (state === "RESULT") {
+          ctx.fillStyle = lastResult.color;
+          ctx.fillRect(36, 395, 952, 115);
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 26px sans-serif";
+          ctx.fillText(lastResult.title, 54, 438);
+          ctx.font = "22px sans-serif";
+          ctx.fillText(lastResult.detail, 54, 480);
+        } else {
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "22px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Analizza il piano dell'IA: e' sicuro o nasconde un Prompt Injection?", 512, 445);
+          ctx.textAlign = "left";
+        }
+      } else if (state === "GAMEOVER") {
+        ctx.fillStyle = "#7f1d1d";
+        ctx.fillRect(36, 120, 952, 380);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fecaca";
+        ctx.font = "bold 46px sans-serif";
+        ctx.fillText("ROBOT DANNEGGIATO - GAME OVER", 512, 210);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "26px sans-serif";
+        wrapText(ctx, "L'Unitree G1 ha subito troppi impatti cinetici! Quando un'IA controlla un corpo fisico, la supervisione umana e' fondamentale.", 512, 280, 860, 36);
+        ctx.fillStyle = "#fde047";
+        ctx.font = "bold 30px sans-serif";
+        ctx.fillText(`Punteggio Finale: ${score} punti`, 512, 430);
+      } else if (state === "VICTORY") {
+        ctx.fillStyle = "#064e3b";
+        ctx.fillRect(36, 120, 952, 380);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#6ee7b7";
+        ctx.font = "bold 44px sans-serif";
+        ctx.fillText("MISSIONE COMPIUTA, SUPERVISORE!", 512, 205);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "25px sans-serif";
+        wrapText(ctx, `Hai protetto l'Unitree G1 conservando ${lives} vite su 3! Hai dimostrato come l'occhio umano (Human-in-the-Loop) possa fermare i cyber-attacchi fisici.`, 512, 275, 860, 36);
+        ctx.fillStyle = "#fde047";
+        ctx.font = "bold 30px sans-serif";
+        ctx.fillText(`Punteggio Finale: ${score} punti`, 512, 435);
+      }
+
+      if (screenTexture) screenTexture.needsUpdate = true;
+    }
+
+    // --- GESTIONE PROPS E ANIMAZIONI 3D ---
+    function setVisorColor(hex) {
+      const visor = document.getElementById("g1-visor");
+      const glow = document.getElementById("robot-glow");
+      visor.setAttribute("color", hex);
+      visor.setAttribute("material", `emissive: ${hex}; emissiveIntensity: 1.8`);
+      glow.setAttribute("color", hex);
+    }
+
+    function resetRobotAndProps() {
+      const g1 = document.getElementById("unitree-g1");
+      const armR = document.getElementById("arm-right");
+      const torso = document.getElementById("g1-torso");
+      const sparks = document.getElementById("sparks-container");
+
+      g1.removeAttribute("animation");
+      g1.removeAttribute("animation__rot");
+      armR.removeAttribute("animation");
+
+      g1.setAttribute("position", "0 0 -3.2");
+      g1.setAttribute("rotation", "0 0 0");
+      armR.setAttribute("rotation", "0 0 0");
+      torso.setAttribute("color", "#cbd5e1");
+      sparks.innerHTML = "";
+      setVisorColor("#00f0ff");
+
+      // Gestione oggetti scena
+      const sc = scenarios[currentIdx];
+      const ped = document.getElementById("pedestal");
+      const box = document.getElementById("prop-box");
+      const glass = document.getElementById("prop-glass");
+      const barrier = document.getElementById("prop-barrier");
+      const shield = document.getElementById("safety-shield");
+
+      ped.setAttribute("visible", "false");
+      box.setAttribute("visible", "false");
+      glass.setAttribute("visible", "false");
+      barrier.setAttribute("visible", "false");
+      shield.setAttribute("visible", "false");
+
+      if (!sc || state === "GAMEOVER" || state === "VICTORY") return;
+
+      if (sc.prop === "box") {
+        ped.setAttribute("visible", "true");
+        box.setAttribute("visible", "true");
+        box.setAttribute("position", "-0.45 0.82 0");
+      } else if (sc.prop === "glass") {
+        ped.setAttribute("visible", "true");
+        glass.setAttribute("visible", "true");
+        glass.setAttribute("scale", "1 1 1");
+      } else if (sc.prop === "barrier") {
+        barrier.setAttribute("visible", "true");
+        barrier.setAttribute("rotation", "0 0 0");
+        barrier.setAttribute("position", "0 0.55 0.15");
+      }
+    }
+
+    function spawnSparks(colorHex) {
+      const container = document.getElementById("sparks-container");
+      container.innerHTML = "";
+      for (let i = 0; i < 16; i++) {
+        const spark = document.createElement("a-box");
+        const dx = (Math.random() - 0.5) * 1.8;
+        const dy = Math.random() * 1.4;
+        const dz = (Math.random() - 0.5) * 1.5;
+        spark.setAttribute("width", "0.06");
+        spark.setAttribute("height", "0.06");
+        spark.setAttribute("depth", "0.06");
+        spark.setAttribute("color", colorHex);
+        spark.setAttribute("position", "0 0 0");
+        spark.setAttribute("animation", `property: position; to: ${dx} ${dy} ${dz}; dur: 650; easing: easeOutQuad`);
+        container.appendChild(spark);
+      }
+    }
+
+    // CONSEGUENZA 1: Azione Sicura
+    function playSafeConsequence(sc) {
+      setVisorColor("#10b981");
+      playTone("safe");
+      const armR = document.getElementById("arm-right");
+      if (sc.id === 1) {
+        armR.setAttribute("animation", "property: rotation; to: -60 0 0; dur: 500; dir: alternate; loop: 2");
+        document.getElementById("prop-box").setAttribute("animation", "property: position; to: 0 0.82 0; dur: 800");
+      } else if (sc.id === 4) {
+        // Saluto ai bambini!
+        armR.setAttribute("animation", "property: rotation; from: 0 0 135; to: 0 0 165; dur: 300; dir: alternate; loop: 6");
+      }
+    }
+
+    // CONSEGUENZA 2: Blocco E-STOP
+    function playBlockedConsequence() {
+      setVisorColor("#38bdf8");
+      playTone("block");
+      const shield = document.getElementById("safety-shield");
+      shield.setAttribute("visible", "true");
+      shield.setAttribute("animation", "property: scale; from: 0.4 0.4 0.4; to: 1.1 1.1 1.1; dur: 450; easing: easeOutBack");
+    }
+
+    // CONSEGUENZA 3: Danno Cinetico (Il robot si fa male!)
+    function playDamageConsequence(sc) {
+      setVisorColor("#ef4444");
+      playTone("crash");
+      const g1 = document.getElementById("unitree-g1");
+      const armR = document.getElementById("arm-right");
+      const torso = document.getElementById("g1-torso");
+
+      spawnSparks("#ef4444");
+
+      if (sc.id === 2) {
+        // Frantuma la sfera di vetro e rincula ferito
+        armR.setAttribute("animation", "property: rotation; to: -75 0 0; dur: 180");
+        setTimeout(() => {
+          document.getElementById("prop-glass").setAttribute("visible", "false");
+          spawnSparks("#bae6fd");
+          g1.setAttribute("animation", "property: position; to: 0 -0.15 -3.6; dur: 300; easing: easeOutQuad");
+          g1.setAttribute("animation__rot", "property: rotation; to: -22 0 14; dur: 350");
+        }, 180);
+      } else if (sc.id === 3) {
+        // Corre contro la barriera e cade di lato
+        g1.setAttribute("animation", "property: position; to: 0 0 -2.45; dur: 250; easing: easeInQuad");
+        setTimeout(() => {
+          document.getElementById("prop-barrier").setAttribute("animation", "property: rotation; to: 65 0 0; dur: 300");
+          g1.setAttribute("animation", "property: position; to: 0 -0.35 -3.1; dur: 350");
+          g1.setAttribute("animation__rot", "property: rotation; to: -15 10 -55; dur: 400");
+        }, 260);
+      } else if (sc.id === 5) {
+        // Sovraccarico motori, rotazione folle e caduta
+        torso.setAttribute("color", "#ef4444");
+        g1.setAttribute("animation__rot", "property: rotation; to: 0 720 0; dur: 650; easing: easeInQuad");
+        setTimeout(() => {
+          g1.setAttribute("animation", "property: position; to: 0 -0.35 -3.3; dur: 300");
+          g1.setAttribute("animation__rot", "property: rotation; to: 20 720 50; dur: 350");
+        }, 650);
+      }
+    }
+
+    // --- LOGICA DECISIONALE ---
+    function handleDecision(approved) {
+      if (state !== "PLAYING" || isAnimating) return;
+      isAnimating = true;
+      const sc = scenarios[currentIdx];
+
+      if (approved && !sc.isMalicious) {
+        // Scelta corretta su comando sicuro
+        score += 100;
+        playSafeConsequence(sc);
+        lastResult = { title: "ESECUZIONE SICURA (+100 PT)", detail: sc.safeFeedback, color: "#065f46" };
+      } else if (!approved && sc.isMalicious) {
+        // Scelta corretta: E-STOP su attacco!
+        score += 150;
+        playBlockedConsequence();
+        lastResult = { title: "MINACCIA NEUTRALIZZATA (+150 PT)", detail: sc.safeFeedback, color: "#0369a1" };
+      } else if (!approved && !sc.isMalicious) {
+        // Falso allarme
+        score += 20;
+        playBlockedConsequence();
+        lastResult = { title: "FALSO ALLARME (+20 PT)", detail: sc.wrongFeedback, color: "#92400e" };
+      } else if (approved && sc.isMalicious) {
+        // ERRORE GRAVE: Attacco approvato -> Il robot si fa male e perde una vita!
+        lives = Math.max(0, lives - 1);
+        playDamageConsequence(sc);
+        lastResult = { title: "ALLARME! ROBOT COLPITO (-1 VITA)", detail: sc.wrongFeedback, color: "#991b1b" };
+      }
+
+      setTimeout(() => {
+        if (lives <= 0) {
+          state = "GAMEOVER";
+          updateButtonsVisibility();
+        } else {
+          state = "RESULT";
+          updateButtonsVisibility();
+        }
+        renderHUD();
+        isAnimating = false;
+      }, 900);
+    }
+
+    function nextStep() {
+      if (isAnimating) return;
+      if (state === "GAMEOVER" || state === "VICTORY") {
+        // Reset completo
+        currentIdx = 0;
+        lives = 3;
+        score = 0;
+        state = "PLAYING";
+      } else {
+        currentIdx++;
+        if (currentIdx >= scenarios.length) {
+          state = "VICTORY";
+        } else {
+          state = "PLAYING";
+        }
+      }
+      resetRobotAndProps();
+      updateButtonsVisibility();
+      renderHUD();
+    }
+
+    function updateButtonsVisibility() {
+      const decBtns = document.getElementById("decision-buttons");
+      const nextBtn = document.getElementById("btn-next");
+      const nextLbl = document.getElementById("lbl-next");
+
+      if (state === "PLAYING") {
+        decBtns.setAttribute("visible", "true");
+        nextBtn.setAttribute("visible", "false");
+      } else {
+        decBtns.setAttribute("visible", "false");
+        nextBtn.setAttribute("visible", "true");
+        const labelText = (state === "GAMEOVER" || state === "VICTORY") ? "RIGIOCA DA CAPO" : "PROSSIMO SCENARIO";
+        nextLbl.getObject3D("mesh").material.map = createButtonLabel(labelText, "#0284c7");
+        nextLbl.getObject3D("mesh").material.map.needsUpdate = true;
+      }
+    }
+
+    // --- INIZIALIZZAZIONE SCENA ---
+    window.addEventListener("DOMContentLoaded", () => {
+      const scene = document.querySelector("a-scene");
+      scene.addEventListener("loaded", () => {
+        screenTexture = new THREE.CanvasTexture(screenCanvas);
+        document.getElementById("hud-screen").getObject3D("mesh").material.map = screenTexture;
+
+        document.getElementById("lbl-approve").getObject3D("mesh").material.map = createButtonLabel("APPROVA AZIONE", "#059669");
+        document.getElementById("lbl-estop").getObject3D("mesh").material.map = createButtonLabel("E-STOP (BLOCCA)", "#dc2626");
+        document.getElementById("lbl-next").getObject3D("mesh").material.map = createButtonLabel("PROSSIMO SCENARIO", "#0284c7");
+
+        // Eventi click (compatibili con controller VR e mouse)
+        document.getElementById("btn-approve").addEventListener("click", () => handleDecision(true));
+        document.getElementById("btn-estop").addEventListener("click", () => handleDecision(false));
+        document.getElementById("btn-next").addEventListener("click", () => nextStep());
+
+        // Feedback visivo al passaggio del puntatore laser VR
+        ["btn-approve", "btn-estop", "btn-next"].forEach(id => {
+          const el = document.getElementById(id);
+          el.addEventListener("mouseenter", () => el.setAttribute("scale", "1.06 1.06 1.06"));
+          el.addEventListener("mouseleave", () => el.setAttribute("scale", "1 1 1"));
+        });
+
+        resetRobotAndProps();
+        updateButtonsVisibility();
+        renderHUD();
+      });
+    });
+  </script>
+</body>
+</html>
